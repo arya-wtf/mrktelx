@@ -1,14 +1,27 @@
-import { useDealStore } from '@/store/dealStore';
-import { getQuarterlyNetRevenue, formatCurrency, calculateTieredCommission } from '@/lib/commission';
+import { Deal } from '@/hooks/useDeals';
+import { formatCurrency, calculateTieredCommission } from '@/lib/commission';
 import { TrendingUp, TrendingDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { parseISO } from 'date-fns';
 
-export function QuarterlySummary() {
-  const { deals } = useDealStore();
+interface QuarterlySummaryProps {
+  deals: Deal[];
+}
+
+export function QuarterlySummary({ deals }: QuarterlySummaryProps) {
   const currentYear = new Date().getFullYear();
 
-  const quarters = [1, 2, 3, 4].map((quarter) => {
-    const netRevenue = getQuarterlyNetRevenue(deals, quarter, currentYear);
+  const getQuarterlyData = (quarter: number) => {
+    const startMonth = (quarter - 1) * 3;
+    const endMonth = startMonth + 2;
+    
+    const quarterDeals = deals.filter((deal) => {
+      const date = parseISO(deal.date_payment);
+      const month = date.getMonth();
+      return month >= startMonth && month <= endMonth && date.getFullYear() === currentYear;
+    });
+
+    const netRevenue = quarterDeals.reduce((sum, d) => sum + (d.net_revenue ?? 0), 0);
     const { commission, tier } = calculateTieredCommission(netRevenue);
     const monthlyAvg = netRevenue / 3;
     const isBelowSafety = monthlyAvg < 1500;
@@ -21,8 +34,11 @@ export function QuarterlySummary() {
       tier,
       monthlyAvg,
       isBelowSafety,
+      dealCount: quarterDeals.length,
     };
-  });
+  };
+
+  const quarters = [1, 2, 3, 4].map(getQuarterlyData);
 
   return (
     <div className="bento-card">
@@ -60,7 +76,7 @@ export function QuarterlySummary() {
             
             <div className="mt-2 space-y-1">
               <p className="text-xs text-muted-foreground">
-                Avg/month: {formatCurrency(q.monthlyAvg)}
+                {q.dealCount} deals • Avg/mo: {formatCurrency(q.monthlyAvg)}
               </p>
               <p className="text-xs">
                 <span className="text-muted-foreground">Commission: </span>

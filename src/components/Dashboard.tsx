@@ -1,11 +1,7 @@
 import { useState, useMemo } from 'react';
-import { useDealStore } from '@/store/dealStore';
-import { 
-  formatCurrency, 
-  calculateTieredCommission, 
-  calculateDealCommission,
-  getMonthlyNetRevenue 
-} from '@/lib/commission';
+import { useDeals, useCorrections, Deal } from '@/hooks/useDeals';
+import { UserRole } from '@/types/deal';
+import { formatCurrency, calculateTieredCommission } from '@/lib/commission';
 import { StatCard } from './StatCard';
 import { DealsTable } from './DealsTable';
 import { QuarterlySummary } from './QuarterlySummary';
@@ -14,6 +10,7 @@ import { PhantomShares } from './PhantomShares';
 import { CorrectionLog } from './CorrectionLog';
 import { TierExplainer } from './TierExplainer';
 import { DealForm } from './DealForm';
+import { RevenueCharts } from './RevenueCharts';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
@@ -23,13 +20,21 @@ import {
   FileText, 
   Award,
   Calendar,
-  BarChart3
+  BarChart3,
+  LineChart,
+  Loader2
 } from 'lucide-react';
-import { format, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
+import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO } from 'date-fns';
 
-export function Dashboard() {
-  const { deals, corrections, userRole } = useDealStore();
+interface DashboardProps {
+  userRole: UserRole;
+}
+
+export function Dashboard({ userRole }: DashboardProps) {
+  const { data: deals = [], isLoading: dealsLoading } = useDeals();
+  const { data: corrections = [], isLoading: correctionsLoading } = useCorrections();
   const [showAddDeal, setShowAddDeal] = useState(false);
+  
   const isAdmin = userRole === 'admin';
 
   // Current month deals
@@ -38,15 +43,15 @@ export function Dashboard() {
     const start = startOfMonth(now);
     const end = endOfMonth(now);
     
-    return deals.filter(deal => {
-      const paymentDate = new Date(deal.datePayment);
+    return deals.filter((deal: Deal) => {
+      const paymentDate = parseISO(deal.date_payment);
       return isWithinInterval(paymentDate, { start, end });
     });
   }, [deals]);
 
   // Calculate totals
   const totalNetRevenue = useMemo(() => 
-    currentMonthDeals.reduce((sum, deal) => sum + deal.netRevenue, 0),
+    currentMonthDeals.reduce((sum: number, deal: Deal) => sum + (deal.net_revenue ?? 0), 0),
     [currentMonthDeals]
   );
 
@@ -61,8 +66,15 @@ export function Dashboard() {
   );
 
   const netCommission = totalCommission - totalClawback;
-
   const { tier } = calculateTieredCommission(totalNetRevenue);
+
+  if (dealsLoading || correctionsLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -87,7 +99,7 @@ export function Dashboard() {
         </div>
 
         {/* Safety Net Alert */}
-        <SafetyNetAlert />
+        <SafetyNetAlert deals={deals} />
 
         {/* Stats Grid - Bento Layout */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
@@ -127,11 +139,15 @@ export function Dashboard() {
           <TabsList className="bg-secondary/50">
             <TabsTrigger value="monthly" className="gap-2">
               <Calendar className="w-4 h-4" />
-              Monthly View
+              Monthly
+            </TabsTrigger>
+            <TabsTrigger value="charts" className="gap-2">
+              <LineChart className="w-4 h-4" />
+              Analytics
             </TabsTrigger>
             <TabsTrigger value="quarterly" className="gap-2">
               <BarChart3 className="w-4 h-4" />
-              Quarterly View
+              Quarterly
             </TabsTrigger>
           </TabsList>
 
@@ -142,23 +158,27 @@ export function Dashboard() {
                 <h3 className="text-lg font-display font-semibold mb-4">
                   Deals This Month
                 </h3>
-                <DealsTable deals={currentMonthDeals} />
+                <DealsTable deals={currentMonthDeals} isAdmin={isAdmin} />
               </div>
 
               {/* Sidebar - 1 column */}
               <div className="space-y-6">
                 <TierExplainer />
-                {isAdmin && <CorrectionLog />}
+                {isAdmin && <CorrectionLog corrections={corrections} deals={deals} isAdmin={isAdmin} />}
               </div>
             </div>
           </TabsContent>
 
+          <TabsContent value="charts" className="space-y-6">
+            <RevenueCharts deals={deals} />
+          </TabsContent>
+
           <TabsContent value="quarterly" className="space-y-6">
-            <QuarterlySummary />
+            <QuarterlySummary deals={deals} />
             
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <PhantomShares />
-              {isAdmin && <CorrectionLog />}
+              {isAdmin && <CorrectionLog corrections={corrections} deals={deals} isAdmin={isAdmin} />}
             </div>
           </TabsContent>
         </Tabs>

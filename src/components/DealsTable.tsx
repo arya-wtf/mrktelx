@@ -1,26 +1,83 @@
 import { useState } from 'react';
-import { useDealStore } from '@/store/dealStore';
-import { Deal } from '@/types/deal';
-import { formatCurrency, calculateDealCommission, calculateRetainerMultiplier } from '@/lib/commission';
+import { Deal, useUpdateDeal, useDeleteDeal } from '@/hooks/useDeals';
+import { formatCurrency, calculateRetainerMultiplier } from '@/lib/commission';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { Trash2, Edit2, Calendar, DollarSign } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Trash2, Edit2, Check, X, DollarSign, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
+import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 
 interface DealsTableProps {
   deals: Deal[];
-  showActions?: boolean;
+  isAdmin: boolean;
 }
 
-export function DealsTable({ deals, showActions = true }: DealsTableProps) {
-  const { deleteDeal, userRole } = useDealStore();
-  const isAdmin = userRole === 'admin';
+export function DealsTable({ deals, isAdmin }: DealsTableProps) {
+  const updateDeal = useUpdateDeal();
+  const deleteDeal = useDeleteDeal();
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editData, setEditData] = useState<Partial<Deal>>({});
+
+  const startEditing = (deal: Deal) => {
+    setEditingId(deal.id);
+    setEditData({
+      name: deal.name,
+      amount_paid: deal.amount_paid,
+      platform_fee: deal.platform_fee,
+      retainer_month: deal.retainer_month,
+    });
+  };
+
+  const cancelEditing = () => {
+    setEditingId(null);
+    setEditData({});
+  };
+
+  const saveEdit = async (id: string) => {
+    try {
+      await updateDeal.mutateAsync({
+        id,
+        ...editData,
+      });
+      toast.success('Deal updated');
+      setEditingId(null);
+      setEditData({});
+    } catch (error) {
+      toast.error('Failed to update deal');
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteDeal.mutateAsync(id);
+      toast.success('Deal deleted');
+    } catch (error) {
+      toast.error('Failed to delete deal');
+    }
+  };
 
   const getRetainerBadge = (month: number) => {
     const multiplier = calculateRetainerMultiplier(month);
     if (multiplier === 1) return <span className="tier-badge tier-3">100%</span>;
     if (multiplier === 0.5) return <span className="tier-badge tier-2">50%</span>;
     return <span className="tier-badge tier-1">0%</span>;
+  };
+
+  const calculateCommission = (deal: Deal) => {
+    const netRevenue = deal.net_revenue ?? 0;
+    let commission = 0;
+    
+    if (netRevenue > 3000) {
+      commission = (1500 * 0.08) + ((netRevenue - 3000) * 0.12);
+    } else if (netRevenue > 1500) {
+      commission = (netRevenue - 1500) * 0.08;
+    }
+    
+    const multiplier = calculateRetainerMultiplier(deal.retainer_month);
+    return commission * multiplier;
   };
 
   if (deals.length === 0) {
@@ -39,54 +96,142 @@ export function DealsTable({ deals, showActions = true }: DealsTableProps) {
           <TableHeader>
             <TableRow className="border-border/50 hover:bg-transparent">
               <TableHead className="text-muted-foreground font-medium">Project</TableHead>
-              <TableHead className="text-muted-foreground font-medium">Deal Date</TableHead>
               <TableHead className="text-muted-foreground font-medium">Payment Date</TableHead>
               <TableHead className="text-muted-foreground font-medium text-right">Gross</TableHead>
               <TableHead className="text-muted-foreground font-medium text-right">Fee</TableHead>
               <TableHead className="text-muted-foreground font-medium text-right">Net</TableHead>
               <TableHead className="text-muted-foreground font-medium text-center">Retainer</TableHead>
               <TableHead className="text-muted-foreground font-medium text-right">Commission</TableHead>
-              {isAdmin && showActions && (
+              {isAdmin && (
                 <TableHead className="text-muted-foreground font-medium text-center">Actions</TableHead>
               )}
             </TableRow>
           </TableHeader>
           <TableBody>
             {deals.map((deal) => {
-              const commission = calculateDealCommission(deal);
+              const isEditing = editingId === deal.id;
+              const commission = calculateCommission(deal);
+              
               return (
                 <TableRow key={deal.id} className="border-border/30 hover:bg-secondary/30">
-                  <TableCell className="font-medium">{deal.name}</TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {format(new Date(deal.dateDeal), 'MMM d, yyyy')}
+                  <TableCell className="font-medium">
+                    {isEditing ? (
+                      <Input
+                        value={editData.name ?? ''}
+                        onChange={(e) => setEditData({ ...editData, name: e.target.value })}
+                        className="h-8 glass-input"
+                      />
+                    ) : (
+                      deal.name
+                    )}
                   </TableCell>
                   <TableCell className="text-muted-foreground">
-                    {format(new Date(deal.datePayment), 'MMM d, yyyy')}
+                    {format(new Date(deal.date_payment), 'MMM d, yyyy')}
                   </TableCell>
-                  <TableCell className="text-right">{formatCurrency(deal.amountPaid)}</TableCell>
+                  <TableCell className="text-right">
+                    {isEditing ? (
+                      <Input
+                        type="number"
+                        value={editData.amount_paid ?? ''}
+                        onChange={(e) => setEditData({ ...editData, amount_paid: parseFloat(e.target.value) })}
+                        className="h-8 w-24 glass-input text-right"
+                        step="0.01"
+                      />
+                    ) : (
+                      formatCurrency(deal.amount_paid)
+                    )}
+                  </TableCell>
                   <TableCell className="text-right text-destructive/80">
-                    -{formatCurrency(deal.platformFee)}
+                    {isEditing ? (
+                      <Input
+                        type="number"
+                        value={editData.platform_fee ?? ''}
+                        onChange={(e) => setEditData({ ...editData, platform_fee: parseFloat(e.target.value) })}
+                        className="h-8 w-24 glass-input text-right"
+                        step="0.01"
+                      />
+                    ) : (
+                      <>-{formatCurrency(deal.platform_fee)}</>
+                    )}
                   </TableCell>
                   <TableCell className="text-right font-medium text-primary">
-                    {formatCurrency(deal.netRevenue)}
+                    {formatCurrency(deal.net_revenue ?? 0)}
                   </TableCell>
                   <TableCell className="text-center">
-                    {getRetainerBadge(deal.retainerMonth)}
+                    {isEditing ? (
+                      <Select
+                        value={String(editData.retainer_month ?? 1)}
+                        onValueChange={(value) => setEditData({ ...editData, retainer_month: parseInt(value) })}
+                      >
+                        <SelectTrigger className="h-8 w-20 glass-input">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="1">M1</SelectItem>
+                          <SelectItem value="2">M2</SelectItem>
+                          <SelectItem value="3">M3</SelectItem>
+                          <SelectItem value="4">M4+</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      getRetainerBadge(deal.retainer_month)
+                    )}
                   </TableCell>
                   <TableCell className="text-right font-medium text-success">
                     {formatCurrency(commission)}
                   </TableCell>
-                  {isAdmin && showActions && (
+                  {isAdmin && (
                     <TableCell>
                       <div className="flex items-center justify-center gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-                          onClick={() => deleteDeal(deal.id)}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
+                        {isEditing ? (
+                          <>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-success hover:text-success hover:bg-success/10"
+                              onClick={() => saveEdit(deal.id)}
+                              disabled={updateDeal.isPending}
+                            >
+                              {updateDeal.isPending ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <Check className="w-4 h-4" />
+                              )}
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                              onClick={cancelEditing}
+                            >
+                              <X className="w-4 h-4" />
+                            </Button>
+                          </>
+                        ) : (
+                          <>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-muted-foreground hover:text-primary"
+                              onClick={() => startEditing(deal)}
+                            >
+                              <Edit2 className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                              onClick={() => handleDelete(deal.id)}
+                              disabled={deleteDeal.isPending}
+                            >
+                              {deleteDeal.isPending ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <Trash2 className="w-4 h-4" />
+                              )}
+                            </Button>
+                          </>
+                        )}
                       </div>
                     </TableCell>
                   )}
