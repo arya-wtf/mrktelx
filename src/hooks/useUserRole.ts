@@ -11,11 +11,19 @@ interface UserRole {
   created_at: string;
 }
 
-interface UserWithRole {
+interface Profile {
   id: string;
+  user_id: string;
   email: string;
+  created_at: string;
+}
+
+export interface UserWithProfile {
+  id: string;
+  user_id: string;
   role: AppRole;
   created_at: string;
+  email: string;
 }
 
 export function useUserRole() {
@@ -43,22 +51,77 @@ export function useUserRole() {
   });
 }
 
+export function useHasAnyAdmin() {
+  return useQuery({
+    queryKey: ['has-any-admin'],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('has_any_admin');
+      
+      if (error) {
+        console.error('Error checking for admins:', error);
+        return true; // Assume admins exist on error to prevent unauthorized promotion
+      }
+      
+      return data as boolean;
+    },
+  });
+}
+
+export function usePromoteToFirstAdmin() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (userId: string) => {
+      const { data, error } = await supabase.rpc('promote_to_first_admin', {
+        _user_id: userId,
+      });
+
+      if (error) throw error;
+      return data as boolean;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['user-role'] });
+      queryClient.invalidateQueries({ queryKey: ['has-any-admin'] });
+      queryClient.invalidateQueries({ queryKey: ['all-users-roles'] });
+    },
+  });
+}
+
 export function useAllUsersWithRoles() {
   return useQuery({
     queryKey: ['all-users-roles'],
     queryFn: async () => {
-      // First get all user roles (only admins can see all via RLS)
-      const { data: roles, error } = await supabase
+      // Get all user roles with their profiles (only admins can see all via RLS)
+      const { data: roles, error: rolesError } = await supabase
         .from('user_roles')
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (error) {
-        console.error('Error fetching all user roles:', error);
-        throw error;
+      if (rolesError) {
+        console.error('Error fetching all user roles:', rolesError);
+        throw rolesError;
       }
 
-      return roles as UserRole[];
+      // Get all profiles
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('*');
+
+      if (profilesError) {
+        console.error('Error fetching profiles:', profilesError);
+        throw profilesError;
+      }
+
+      // Merge roles with profiles
+      const usersWithProfiles: UserWithProfile[] = (roles as UserRole[]).map((role) => {
+        const profile = (profiles as Profile[]).find((p) => p.user_id === role.user_id);
+        return {
+          ...role,
+          email: profile?.email ?? 'Unknown',
+        };
+      });
+
+      return usersWithProfiles;
     },
   });
 }

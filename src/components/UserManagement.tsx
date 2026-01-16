@@ -1,9 +1,7 @@
-import { useAllUsersWithRoles, useUpdateUserRole, AppRole } from '@/hooks/useUserRole';
+import { useAllUsersWithRoles, useUpdateUserRole, AppRole, UserWithProfile } from '@/hooks/useUserRole';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Users, Shield, Eye, Loader2 } from 'lucide-react';
+import { Users, Shield, Eye, Loader2, Mail } from 'lucide-react';
 import { toast } from 'sonner';
 import { format, parseISO } from 'date-fns';
 
@@ -51,20 +49,23 @@ export function UserManagement() {
             <p className="text-center text-muted-foreground py-4">No users found</p>
           ) : (
             <div className="divide-y divide-border">
-              {users.map((user) => (
+              {users.map((user: UserWithProfile) => (
                 <div key={user.id} className="flex items-center justify-between py-3 first:pt-0 last:pb-0">
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
+                    <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
                       {user.role === 'admin' ? (
-                        <Shield className="w-4 h-4 text-primary" />
+                        <Shield className="w-5 h-5 text-primary" />
                       ) : (
-                        <Eye className="w-4 h-4 text-muted-foreground" />
+                        <Eye className="w-5 h-5 text-muted-foreground" />
                       )}
                     </div>
                     <div>
-                      <p className="text-sm font-medium truncate max-w-[200px]">
-                        User ID: {user.user_id.slice(0, 8)}...
-                      </p>
+                      <div className="flex items-center gap-2">
+                        <Mail className="w-3 h-3 text-muted-foreground" />
+                        <p className="text-sm font-medium truncate max-w-[250px]">
+                          {user.email}
+                        </p>
+                      </div>
                       <p className="text-xs text-muted-foreground">
                         Joined {format(parseISO(user.created_at), 'MMM d, yyyy')}
                       </p>
@@ -76,7 +77,7 @@ export function UserManagement() {
                     onValueChange={(value: AppRole) => handleRoleChange(user.user_id, value)}
                     disabled={updateRole.isPending}
                   >
-                    <SelectTrigger className="w-[120px]">
+                    <SelectTrigger className="w-[130px]">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
