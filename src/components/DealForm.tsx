@@ -1,45 +1,50 @@
 import { useState } from 'react';
-import { useDealStore } from '@/store/dealStore';
+import { useAddDeal } from '@/hooks/useDeals';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, X } from 'lucide-react';
+import { Plus, X, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface DealFormProps {
   onClose: () => void;
 }
 
 export function DealForm({ onClose }: DealFormProps) {
-  const { addDeal } = useDealStore();
+  const addDeal = useAddDeal();
   const [formData, setFormData] = useState({
     name: '',
-    dateDeal: '',
-    datePayment: '',
-    estimateDateDone: '',
-    amountPaid: '',
-    platformFee: '',
-    retainerMonth: '1',
+    date_deal: '',
+    date_payment: '',
+    estimate_date_done: '',
+    amount_paid: '',
+    platform_fee: '',
+    retainer_month: '1',
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    addDeal({
-      name: formData.name,
-      dateDeal: formData.dateDeal,
-      datePayment: formData.datePayment,
-      estimateDateDone: formData.estimateDateDone,
-      amountPaid: parseFloat(formData.amountPaid),
-      platformFee: parseFloat(formData.platformFee),
-      retainerMonth: parseInt(formData.retainerMonth),
-    });
-
-    onClose();
+    try {
+      await addDeal.mutateAsync({
+        name: formData.name,
+        date_deal: formData.date_deal,
+        date_payment: formData.date_payment,
+        estimate_date_done: formData.estimate_date_done,
+        amount_paid: parseFloat(formData.amount_paid),
+        platform_fee: parseFloat(formData.platform_fee),
+        retainer_month: parseInt(formData.retainer_month),
+      });
+      toast.success('Deal added successfully');
+      onClose();
+    } catch (error) {
+      toast.error('Failed to add deal');
+    }
   };
 
-  const netRevenue = formData.amountPaid && formData.platformFee
-    ? parseFloat(formData.amountPaid) - parseFloat(formData.platformFee)
+  const netRevenue = formData.amount_paid && formData.platform_fee
+    ? parseFloat(formData.amount_paid) - parseFloat(formData.platform_fee)
     : 0;
 
   return (
@@ -70,23 +75,23 @@ export function DealForm({ onClose }: DealFormProps) {
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="dateDeal">Date Deal Signed</Label>
+              <Label htmlFor="date_deal">Date Deal Signed</Label>
               <Input
-                id="dateDeal"
+                id="date_deal"
                 type="date"
-                value={formData.dateDeal}
-                onChange={(e) => setFormData({ ...formData, dateDeal: e.target.value })}
+                value={formData.date_deal}
+                onChange={(e) => setFormData({ ...formData, date_deal: e.target.value })}
                 className="glass-input mt-1"
                 required
               />
             </div>
             <div>
-              <Label htmlFor="datePayment">Date Payment Received</Label>
+              <Label htmlFor="date_payment">Date Payment Received</Label>
               <Input
-                id="datePayment"
+                id="date_payment"
                 type="date"
-                value={formData.datePayment}
-                onChange={(e) => setFormData({ ...formData, datePayment: e.target.value })}
+                value={formData.date_payment}
+                onChange={(e) => setFormData({ ...formData, date_payment: e.target.value })}
                 className="glass-input mt-1"
                 required
               />
@@ -94,12 +99,12 @@ export function DealForm({ onClose }: DealFormProps) {
           </div>
 
           <div>
-            <Label htmlFor="estimateDateDone">Estimated Completion Date</Label>
+            <Label htmlFor="estimate_date_done">Estimated Completion Date</Label>
             <Input
-              id="estimateDateDone"
+              id="estimate_date_done"
               type="date"
-              value={formData.estimateDateDone}
-              onChange={(e) => setFormData({ ...formData, estimateDateDone: e.target.value })}
+              value={formData.estimate_date_done}
+              onChange={(e) => setFormData({ ...formData, estimate_date_done: e.target.value })}
               className="glass-input mt-1"
               required
             />
@@ -107,14 +112,14 @@ export function DealForm({ onClose }: DealFormProps) {
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="amountPaid">Amount Paid (Gross)</Label>
+              <Label htmlFor="amount_paid">Amount Paid (Gross)</Label>
               <div className="relative mt-1">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
                 <Input
-                  id="amountPaid"
+                  id="amount_paid"
                   type="number"
-                  value={formData.amountPaid}
-                  onChange={(e) => setFormData({ ...formData, amountPaid: e.target.value })}
+                  value={formData.amount_paid}
+                  onChange={(e) => setFormData({ ...formData, amount_paid: e.target.value })}
                   className="glass-input pl-7"
                   placeholder="0.00"
                   step="0.01"
@@ -124,14 +129,14 @@ export function DealForm({ onClose }: DealFormProps) {
               </div>
             </div>
             <div>
-              <Label htmlFor="platformFee">Platform Fee</Label>
+              <Label htmlFor="platform_fee">Platform Fee</Label>
               <div className="relative mt-1">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
                 <Input
-                  id="platformFee"
+                  id="platform_fee"
                   type="number"
-                  value={formData.platformFee}
-                  onChange={(e) => setFormData({ ...formData, platformFee: e.target.value })}
+                  value={formData.platform_fee}
+                  onChange={(e) => setFormData({ ...formData, platform_fee: e.target.value })}
                   className="glass-input pl-7"
                   placeholder="0.00"
                   step="0.01"
@@ -152,10 +157,10 @@ export function DealForm({ onClose }: DealFormProps) {
           )}
 
           <div>
-            <Label htmlFor="retainerMonth">Retainer Month</Label>
+            <Label htmlFor="retainer_month">Retainer Month</Label>
             <Select
-              value={formData.retainerMonth}
-              onValueChange={(value) => setFormData({ ...formData, retainerMonth: value })}
+              value={formData.retainer_month}
+              onValueChange={(value) => setFormData({ ...formData, retainer_month: value })}
             >
               <SelectTrigger className="glass-input mt-1">
                 <SelectValue />
@@ -178,8 +183,12 @@ export function DealForm({ onClose }: DealFormProps) {
             >
               Cancel
             </Button>
-            <Button type="submit" className="flex-1 gap-2">
-              <Plus className="w-4 h-4" />
+            <Button type="submit" className="flex-1 gap-2" disabled={addDeal.isPending}>
+              {addDeal.isPending ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Plus className="w-4 h-4" />
+              )}
               Add Deal
             </Button>
           </div>

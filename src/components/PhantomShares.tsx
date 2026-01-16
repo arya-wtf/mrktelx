@@ -1,11 +1,28 @@
-import { useDealStore } from '@/store/dealStore';
-import { differenceInDays, differenceInMonths, addYears, format } from 'date-fns';
-import { Award, Calendar, TrendingUp } from 'lucide-react';
+import { useEffect } from 'react';
+import { usePhantomShares, useCreatePhantomShares, PhantomShare } from '@/hooks/useDeals';
+import { differenceInDays, differenceInMonths, addYears, format, parseISO } from 'date-fns';
+import { Award, Calendar, TrendingUp, Loader2 } from 'lucide-react';
 
 export function PhantomShares() {
-  const { phantomSharesStartDate } = useDealStore();
-  
-  const startDate = new Date(phantomSharesStartDate);
+  const { data: phantomShares, isLoading } = usePhantomShares();
+  const createPhantomShares = useCreatePhantomShares();
+
+  // Auto-create phantom shares record if none exists
+  useEffect(() => {
+    if (!isLoading && !phantomShares && !createPhantomShares.isPending) {
+      createPhantomShares.mutate('2023-01-01');
+    }
+  }, [isLoading, phantomShares, createPhantomShares]);
+
+  if (isLoading) {
+    return (
+      <div className="bento-card-glow flex items-center justify-center py-12">
+        <Loader2 className="w-6 h-6 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  const startDate = phantomShares ? parseISO(phantomShares.start_date) : new Date('2023-01-01');
   const vestingEndDate = addYears(startDate, 4);
   const today = new Date();
   

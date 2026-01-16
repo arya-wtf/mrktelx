@@ -1,13 +1,15 @@
-import { useDealStore } from '@/store/dealStore';
+import { useAuth } from '@/hooks/useAuth';
 import { UserRole } from '@/types/deal';
-import { Shield, Eye, Sparkles } from 'lucide-react';
+import { Shield, Eye, Sparkles, LogOut, User } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
-export function Header() {
-  const { userRole, setUserRole } = useDealStore();
+interface HeaderProps {
+  userRole: UserRole;
+  onRoleChange: (role: UserRole) => void;
+}
 
-  const handleRoleChange = (role: UserRole) => {
-    setUserRole(role);
-  };
+export function Header({ userRole, onRoleChange }: HeaderProps) {
+  const { user, signOut } = useAuth();
 
   return (
     <header className="border-b border-border/50 bg-card/50 backdrop-blur-sm sticky top-0 z-50">
@@ -27,32 +29,52 @@ export function Header() {
             </div>
           </div>
 
-          {/* Role Switcher */}
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground mr-2">View as:</span>
-            <div className="flex rounded-lg bg-secondary/50 p-1">
-              <button
-                onClick={() => handleRoleChange('admin')}
-                className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all ${
-                  userRole === 'admin'
-                    ? 'bg-primary text-primary-foreground shadow-md'
-                    : 'text-muted-foreground hover:text-foreground'
-                }`}
+          <div className="flex items-center gap-4">
+            {/* Role Switcher */}
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground mr-2 hidden sm:inline">View as:</span>
+              <div className="flex rounded-lg bg-secondary/50 p-1">
+                <button
+                  onClick={() => onRoleChange('admin')}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all ${
+                    userRole === 'admin'
+                      ? 'bg-primary text-primary-foreground shadow-md'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  <Shield className="w-4 h-4" />
+                  <span className="hidden sm:inline">Admin</span>
+                </button>
+                <button
+                  onClick={() => onRoleChange('marketer')}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all ${
+                    userRole === 'marketer'
+                      ? 'bg-primary text-primary-foreground shadow-md'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  <Eye className="w-4 h-4" />
+                  <span className="hidden sm:inline">Marketer</span>
+                </button>
+              </div>
+            </div>
+
+            {/* User Menu */}
+            <div className="flex items-center gap-2 pl-4 border-l border-border/50">
+              <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
+                <User className="w-4 h-4 text-primary" />
+              </div>
+              <span className="text-sm text-muted-foreground hidden md:inline max-w-[150px] truncate">
+                {user?.email}
+              </span>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => signOut()}
+                className="text-muted-foreground hover:text-foreground"
               >
-                <Shield className="w-4 h-4" />
-                Admin (CEO)
-              </button>
-              <button
-                onClick={() => handleRoleChange('marketer')}
-                className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all ${
-                  userRole === 'marketer'
-                    ? 'bg-primary text-primary-foreground shadow-md'
-                    : 'text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                <Eye className="w-4 h-4" />
-                Marketer
-              </button>
+                <LogOut className="w-4 h-4" />
+              </Button>
             </div>
           </div>
         </div>

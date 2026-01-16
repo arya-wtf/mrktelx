@@ -1,45 +1,64 @@
 import { useState } from 'react';
-import { useDealStore } from '@/store/dealStore';
+import { useDeals, useAddCorrection, useDeleteCorrection, Deal, Correction } from '@/hooks/useDeals';
 import { formatCurrency } from '@/lib/commission';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Trash2, AlertCircle } from 'lucide-react';
-import { format } from 'date-fns';
+import { Plus, Trash2, AlertCircle, Loader2 } from 'lucide-react';
+import { format, parseISO } from 'date-fns';
+import { toast } from 'sonner';
 
-export function CorrectionLog() {
-  const { corrections, deals, addCorrection, deleteCorrection, userRole } = useDealStore();
+interface CorrectionLogProps {
+  corrections: Correction[];
+  deals: Deal[];
+  isAdmin: boolean;
+}
+
+export function CorrectionLog({ corrections, deals, isAdmin }: CorrectionLogProps) {
+  const addCorrection = useAddCorrection();
+  const deleteCorrection = useDeleteCorrection();
   const [isAdding, setIsAdding] = useState(false);
   const [formData, setFormData] = useState({
-    dealId: '',
+    deal_id: '',
     amount: '',
     reason: '',
     date: new Date().toISOString().split('T')[0],
   });
 
-  const isAdmin = userRole === 'admin';
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const deal = deals.find(d => d.id === formData.dealId);
+    const deal = deals.find(d => d.id === formData.deal_id);
     if (!deal) return;
 
-    addCorrection({
-      dealId: formData.dealId,
-      dealName: deal.name,
-      amount: parseFloat(formData.amount),
-      reason: formData.reason,
-      date: formData.date,
-    });
+    try {
+      await addCorrection.mutateAsync({
+        deal_id: formData.deal_id,
+        deal_name: deal.name,
+        amount: parseFloat(formData.amount),
+        reason: formData.reason,
+        date: formData.date,
+      });
+      toast.success('Correction added');
+      setFormData({
+        deal_id: '',
+        amount: '',
+        reason: '',
+        date: new Date().toISOString().split('T')[0],
+      });
+      setIsAdding(false);
+    } catch (error) {
+      toast.error('Failed to add correction');
+    }
+  };
 
-    setFormData({
-      dealId: '',
-      amount: '',
-      reason: '',
-      date: new Date().toISOString().split('T')[0],
-    });
-    setIsAdding(false);
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteCorrection.mutateAsync(id);
+      toast.success('Correction deleted');
+    } catch (error) {
+      toast.error('Failed to delete correction');
+    }
   };
 
   const totalClawback = corrections.reduce((sum, c) => sum + c.amount, 0);
@@ -76,8 +95,8 @@ export function CorrectionLog() {
             <div>
               <Label>Select Deal</Label>
               <Select
-                value={formData.dealId}
-                onValueChange={(value) => setFormData({ ...formData, dealId: value })}
+                value={formData.deal_id}
+                onValueChange={(value) => setFormData({ ...formData, deal_id: value })}
               >
                 <SelectTrigger className="glass-input mt-1">
                   <SelectValue placeholder="Select a deal" />
@@ -132,7 +151,10 @@ export function CorrectionLog() {
               <Button type="button" variant="ghost" size="sm" onClick={() => setIsAdding(false)}>
                 Cancel
               </Button>
-              <Button type="submit" size="sm">Add Correction</Button>
+              <Button type="submit" size="sm" disabled={addCorrection.isPending}>
+                {addCorrection.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                Add Correction
+              </Button>
             </div>
           </div>
         </form>
@@ -147,9 +169,9 @@ export function CorrectionLog() {
               className="flex items-center justify-between p-3 rounded-lg bg-secondary/30 border border-border/30"
             >
               <div>
-                <p className="font-medium text-sm">{correction.dealName}</p>
+                <p className="font-medium text-sm">{correction.deal_name}</p>
                 <p className="text-xs text-muted-foreground">
-                  {correction.reason} • {format(new Date(correction.date), 'MMM d, yyyy')}
+                  {correction.reason} • {format(parseISO(correction.date), 'MMM d, yyyy')}
                 </p>
               </div>
               <div className="flex items-center gap-3">
@@ -161,9 +183,14 @@ export function CorrectionLog() {
                     variant="ghost"
                     size="icon"
                     className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                    onClick={() => deleteCorrection(correction.id)}
+                    onClick={() => handleDelete(correction.id)}
+                    disabled={deleteCorrection.isPending}
                   >
-                    <Trash2 className="w-3 h-3" />
+                    {deleteCorrection.isPending ? (
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                    ) : (
+                      <Trash2 className="w-3 h-3" />
+                    )}
                   </Button>
                 )}
               </div>
