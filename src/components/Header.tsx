@@ -1,15 +1,16 @@
 import { useAuth } from '@/hooks/useAuth';
-import { UserRole } from '@/types/deal';
+import { AppRole } from '@/hooks/useUserRole';
 import { Shield, Eye, Sparkles, LogOut, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 
 interface HeaderProps {
-  userRole: UserRole;
-  onRoleChange: (role: UserRole) => void;
+  userRole: AppRole;
 }
 
-export function Header({ userRole, onRoleChange }: HeaderProps) {
+export function Header({ userRole }: HeaderProps) {
   const { user, signOut } = useAuth();
+  const isAdmin = userRole === 'admin';
 
   return (
     <header className="border-b border-border/50 bg-card/50 backdrop-blur-sm sticky top-0 z-50">
@@ -30,34 +31,23 @@ export function Header({ userRole, onRoleChange }: HeaderProps) {
           </div>
 
           <div className="flex items-center gap-4">
-            {/* Role Switcher */}
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground mr-2 hidden sm:inline">View as:</span>
-              <div className="flex rounded-lg bg-secondary/50 p-1">
-                <button
-                  onClick={() => onRoleChange('admin')}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all ${
-                    userRole === 'admin'
-                      ? 'bg-primary text-primary-foreground shadow-md'
-                      : 'text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  <Shield className="w-4 h-4" />
-                  <span className="hidden sm:inline">Admin</span>
-                </button>
-                <button
-                  onClick={() => onRoleChange('marketer')}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all ${
-                    userRole === 'marketer'
-                      ? 'bg-primary text-primary-foreground shadow-md'
-                      : 'text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  <Eye className="w-4 h-4" />
-                  <span className="hidden sm:inline">Marketer</span>
-                </button>
-              </div>
-            </div>
+            {/* Role Badge */}
+            <Badge 
+              variant={isAdmin ? 'default' : 'secondary'}
+              className="flex items-center gap-1.5"
+            >
+              {isAdmin ? (
+                <>
+                  <Shield className="w-3 h-3" />
+                  Admin
+                </>
+              ) : (
+                <>
+                  <Eye className="w-3 h-3" />
+                  Marketer
+                </>
+              )}
+            </Badge>
 
             {/* User Menu */}
             <div className="flex items-center gap-2 pl-4 border-l border-border/50">

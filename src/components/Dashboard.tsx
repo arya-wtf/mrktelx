@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useDeals, useCorrections, Deal } from '@/hooks/useDeals';
-import { UserRole } from '@/types/deal';
+import { AppRole } from '@/hooks/useUserRole';
 import { formatCurrency, calculateTieredCommission } from '@/lib/commission';
 import { StatCard } from './StatCard';
 import { DealsTable } from './DealsTable';
@@ -11,6 +11,7 @@ import { CorrectionLog } from './CorrectionLog';
 import { TierExplainer } from './TierExplainer';
 import { DealForm } from './DealForm';
 import { RevenueCharts } from './RevenueCharts';
+import { UserManagement } from './UserManagement';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
@@ -22,12 +23,13 @@ import {
   Calendar,
   BarChart3,
   LineChart,
-  Loader2
+  Loader2,
+  Users
 } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO } from 'date-fns';
 
 interface DashboardProps {
-  userRole: UserRole;
+  userRole: AppRole;
 }
 
 export function Dashboard({ userRole }: DashboardProps) {
@@ -149,6 +151,12 @@ export function Dashboard({ userRole }: DashboardProps) {
               <BarChart3 className="w-4 h-4" />
               Quarterly
             </TabsTrigger>
+            {isAdmin && (
+              <TabsTrigger value="users" className="gap-2">
+                <Users className="w-4 h-4" />
+                Users
+              </TabsTrigger>
+            )}
           </TabsList>
 
           <TabsContent value="monthly" className="space-y-6">
@@ -181,6 +189,12 @@ export function Dashboard({ userRole }: DashboardProps) {
               {isAdmin && <CorrectionLog corrections={corrections} deals={deals} isAdmin={isAdmin} />}
             </div>
           </TabsContent>
+
+          {isAdmin && (
+            <TabsContent value="users" className="space-y-6">
+              <UserManagement />
+            </TabsContent>
+          )}
         </Tabs>
       </div>
 
