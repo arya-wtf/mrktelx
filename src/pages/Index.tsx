@@ -1,16 +1,15 @@
-import { useState } from 'react';
 import { AuthProvider, useAuth } from '@/hooks/useAuth';
+import { useUserRole } from '@/hooks/useUserRole';
 import { Header } from '@/components/Header';
 import { Dashboard } from '@/components/Dashboard';
 import { AuthForm } from '@/components/AuthForm';
-import { UserRole } from '@/types/deal';
 import { Loader2 } from 'lucide-react';
 
 function IndexContent() {
   const { user, loading } = useAuth();
-  const [userRole, setUserRole] = useState<UserRole>('admin');
+  const { data: userRoleData, isLoading: roleLoading } = useUserRole();
 
-  if (loading) {
+  if (loading || (user && roleLoading)) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -22,9 +21,11 @@ function IndexContent() {
     return <AuthForm />;
   }
 
+  const userRole = userRoleData?.role ?? 'marketer';
+
   return (
     <div className="min-h-screen bg-background">
-      <Header userRole={userRole} onRoleChange={setUserRole} />
+      <Header userRole={userRole} />
       <Dashboard userRole={userRole} />
     </div>
   );
