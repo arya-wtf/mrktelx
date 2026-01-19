@@ -3,7 +3,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Tables, TablesInsert, TablesUpdate } from '@/integrations/supabase/types';
 
-export type Deal = Tables<'deals'>;
+export type Deal = Tables<'deals'> & {
+  marketer_email?: string;
+};
 export type DealInsert = TablesInsert<'deals'>;
 export type DealUpdate = TablesUpdate<'deals'>;
 export type Correction = Tables<'corrections'>;
@@ -17,13 +19,29 @@ export function useDeals() {
     queryKey: ['deals', user?.id],
     queryFn: async () => {
       if (!user) return [];
-      const { data, error } = await supabase
+      
+      // Fetch deals with marketer profile info
+      const { data: deals, error } = await supabase
         .from('deals')
         .select('*')
         .order('date_payment', { ascending: false });
       
       if (error) throw error;
-      return data as Deal[];
+      
+      // Fetch profiles for all unique user_ids
+      const userIds = [...new Set(deals.map(d => d.user_id))];
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('user_id, email')
+        .in('user_id', userIds);
+      
+      // Map emails to deals
+      const profileMap = new Map(profiles?.map(p => [p.user_id, p.email]) ?? []);
+      
+      return deals.map(deal => ({
+        ...deal,
+        marketer_email: profileMap.get(deal.user_id),
+      })) as Deal[];
     },
     enabled: !!user,
   });
