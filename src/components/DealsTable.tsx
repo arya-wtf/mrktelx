@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Deal, useUpdateDeal, useDeleteDeal } from '@/hooks/useDeals';
-import { formatCurrency, calculateRetainerMultiplier } from '@/lib/commission';
+import { formatCurrency } from '@/lib/commission';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -63,18 +63,13 @@ export function DealsTable({ deals, isAdmin }: DealsTableProps) {
 
   const getDealTypeBadge = (deal: Deal) => {
     if (deal.is_retainer) {
-      const multiplier = calculateRetainerMultiplier(deal.retainer_month);
-      const label = multiplier === 1 ? '100%' : multiplier === 0.5 ? '50%' : '0%';
       return (
         <div className="flex flex-col items-center gap-1">
           <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400">
             <RefreshCw className="w-3 h-3" />
             Retainer
           </span>
-          <span className={cn(
-            "tier-badge",
-            multiplier === 1 ? "tier-3" : multiplier === 0.5 ? "tier-2" : "tier-1"
-          )}>M{deal.retainer_month > 3 ? '4+' : deal.retainer_month} ({label})</span>
+          <span className="tier-badge tier-2">M{deal.retainer_month > 3 ? '4+' : deal.retainer_month}</span>
         </div>
       );
     }
@@ -86,25 +81,6 @@ export function DealsTable({ deals, isAdmin }: DealsTableProps) {
     );
   };
 
-  const calculateCommission = (deal: Deal) => {
-    const netRevenue = deal.net_revenue ?? 0;
-    let commission = 0;
-    
-    if (netRevenue > 3000) {
-      commission = (1500 * 0.08) + ((netRevenue - 3000) * 0.12);
-    } else if (netRevenue > 1500) {
-      commission = (netRevenue - 1500) * 0.08;
-    }
-    
-    // Project deals get full commission
-    if (!deal.is_retainer) {
-      return commission;
-    }
-    
-    // Retainer deals apply multiplier
-    const multiplier = calculateRetainerMultiplier(deal.retainer_month);
-    return commission * multiplier;
-  };
 
   if (deals.length === 0) {
     return (
@@ -127,7 +103,7 @@ export function DealsTable({ deals, isAdmin }: DealsTableProps) {
               <TableHead className="text-muted-foreground font-medium text-right">Fee</TableHead>
               <TableHead className="text-muted-foreground font-medium text-right">Net</TableHead>
               <TableHead className="text-muted-foreground font-medium text-center">Type</TableHead>
-              <TableHead className="text-muted-foreground font-medium text-right">Commission</TableHead>
+              
               {isAdmin && (
                 <TableHead className="text-muted-foreground font-medium text-center">Actions</TableHead>
               )}
@@ -136,7 +112,6 @@ export function DealsTable({ deals, isAdmin }: DealsTableProps) {
           <TableBody>
             {deals.map((deal) => {
               const isEditing = editingId === deal.id;
-              const commission = calculateCommission(deal);
               
               return (
                 <TableRow key={deal.id} className="border-border/30 hover:bg-secondary/30">
@@ -213,9 +188,6 @@ export function DealsTable({ deals, isAdmin }: DealsTableProps) {
                     ) : (
                       getDealTypeBadge(deal)
                     )}
-                  </TableCell>
-                  <TableCell className="text-right font-medium text-success">
-                    {formatCurrency(commission)}
                   </TableCell>
                   {isAdmin && (
                     <TableCell>
