@@ -34,12 +34,15 @@ export function useAddDeal() {
   const { user } = useAuth();
 
   return useMutation({
-    mutationFn: async (deal: Omit<DealInsert, 'user_id'>) => {
+    mutationFn: async (deal: Omit<DealInsert, 'user_id'> & { user_id?: string }) => {
       if (!user) throw new Error('Not authenticated');
+      
+      // Use provided user_id (admin assigning to marketer) or fall back to current user
+      const targetUserId = deal.user_id || user.id;
       
       const { data, error } = await supabase
         .from('deals')
-        .insert({ ...deal, user_id: user.id })
+        .insert({ ...deal, user_id: targetUserId })
         .select()
         .single();
       
