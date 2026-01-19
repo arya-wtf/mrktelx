@@ -96,16 +96,17 @@ export function DealForm({ onClose, isAdmin }: DealFormProps) {
                   <SelectValue placeholder={usersLoading ? "Loading..." : "Select a marketer"} />
                 </SelectTrigger>
                 <SelectContent>
-                  {marketers.map((marketer) => (
-                    <SelectItem key={marketer.user_id} value={marketer.user_id}>
-                      <div className="flex items-center gap-2">
-                        <User className="w-4 h-4" />
-                        {marketer.email}
-                      </div>
-                    </SelectItem>
-                  ))}
-                  {marketers.length === 0 && !usersLoading && (
-                    <SelectItem value="" disabled>No marketers available</SelectItem>
+                  {marketers.length === 0 && !usersLoading ? (
+                    <div className="px-2 py-1.5 text-sm text-muted-foreground">No marketers available</div>
+                  ) : (
+                    marketers.map((marketer) => (
+                      <SelectItem key={marketer.user_id} value={marketer.user_id}>
+                        <div className="flex items-center gap-2">
+                          <User className="w-4 h-4" />
+                          {marketer.email}
+                        </div>
+                      </SelectItem>
+                    ))
                   )}
                 </SelectContent>
               </Select>
