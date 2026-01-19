@@ -8,7 +8,7 @@ export type DealInsert = TablesInsert<'deals'>;
 export type DealUpdate = TablesUpdate<'deals'>;
 export type Correction = Tables<'corrections'>;
 export type CorrectionInsert = TablesInsert<'corrections'>;
-export type PhantomShare = Tables<'phantom_shares'>;
+
 
 export function useDeals() {
   const { user } = useAuth();
@@ -154,44 +154,3 @@ export function useDeleteCorrection() {
   });
 }
 
-export function usePhantomShares() {
-  const { user } = useAuth();
-  
-  return useQuery({
-    queryKey: ['phantom_shares', user?.id],
-    queryFn: async () => {
-      if (!user) return null;
-      const { data, error } = await supabase
-        .from('phantom_shares')
-        .select('*')
-        .maybeSingle();
-      
-      if (error) throw error;
-      return data as PhantomShare | null;
-    },
-    enabled: !!user,
-  });
-}
-
-export function useCreatePhantomShares() {
-  const queryClient = useQueryClient();
-  const { user } = useAuth();
-
-  return useMutation({
-    mutationFn: async (startDate: string) => {
-      if (!user) throw new Error('Not authenticated');
-      
-      const { data, error } = await supabase
-        .from('phantom_shares')
-        .insert({ user_id: user.id, start_date: startDate })
-        .select()
-        .single();
-      
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['phantom_shares'] });
-    },
-  });
-}

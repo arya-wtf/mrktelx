@@ -6,7 +6,7 @@ import { StatCard } from './StatCard';
 import { DealsTable } from './DealsTable';
 import { QuarterlySummary } from './QuarterlySummary';
 import { SafetyNetAlert } from './SafetyNetAlert';
-import { PhantomShares } from './PhantomShares';
+
 import { CorrectionLog } from './CorrectionLog';
 import { TierExplainer } from './TierExplainer';
 import { DealForm } from './DealForm';
@@ -214,10 +214,9 @@ export function Dashboard({ userRole }: DashboardProps) {
           <TabsContent value="quarterly" className="space-y-6">
             <QuarterlySummary deals={deals} />
             
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <PhantomShares />
-              {isAdmin && <CorrectionLog corrections={corrections} deals={deals} isAdmin={isAdmin} />}
-            </div>
+            {isAdmin && (
+              <CorrectionLog corrections={corrections} deals={deals} isAdmin={isAdmin} />
+            )}
           </TabsContent>
 
           {isAdmin && (
