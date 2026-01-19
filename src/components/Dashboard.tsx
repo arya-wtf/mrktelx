@@ -14,6 +14,7 @@ import { RevenueCharts } from './RevenueCharts';
 import { UserManagement } from './UserManagement';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
   Plus, 
   DollarSign, 
@@ -24,9 +25,11 @@ import {
   BarChart3,
   LineChart,
   Loader2,
-  Users
+  Users,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
-import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO } from 'date-fns';
+import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO, subMonths, addMonths } from 'date-fns';
 
 interface DashboardProps {
   userRole: AppRole;
@@ -36,20 +39,20 @@ export function Dashboard({ userRole }: DashboardProps) {
   const { data: deals = [], isLoading: dealsLoading } = useDeals();
   const { data: corrections = [], isLoading: correctionsLoading } = useCorrections();
   const [showAddDeal, setShowAddDeal] = useState(false);
+  const [selectedMonth, setSelectedMonth] = useState(new Date());
   
   const isAdmin = userRole === 'admin';
 
-  // Current month deals
+  // Selected month deals
   const currentMonthDeals = useMemo(() => {
-    const now = new Date();
-    const start = startOfMonth(now);
-    const end = endOfMonth(now);
+    const start = startOfMonth(selectedMonth);
+    const end = endOfMonth(selectedMonth);
     
     return deals.filter((deal: Deal) => {
       const paymentDate = parseISO(deal.date_payment);
       return isWithinInterval(paymentDate, { start, end });
     });
-  }, [deals]);
+  }, [deals, selectedMonth]);
 
   // Calculate totals
   const totalNetRevenue = useMemo(() => 
@@ -87,9 +90,27 @@ export function Dashboard({ userRole }: DashboardProps) {
             <h1 className="text-2xl md:text-3xl font-display font-bold">
               {isAdmin ? 'Management Dashboard' : 'Performance Dashboard'}
             </h1>
-            <p className="text-muted-foreground mt-1">
-              {format(new Date(), 'MMMM yyyy')} Overview
-            </p>
+            <div className="flex items-center gap-2 mt-1">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => setSelectedMonth(subMonths(selectedMonth, 1))}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <span className="text-muted-foreground font-medium min-w-[140px] text-center">
+                {format(selectedMonth, 'MMMM yyyy')}
+              </span>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => setSelectedMonth(addMonths(selectedMonth, 1))}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
           
           {isAdmin && (
