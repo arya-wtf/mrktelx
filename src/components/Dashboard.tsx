@@ -10,6 +10,7 @@ import { PhantomShares } from './PhantomShares';
 import { CorrectionLog } from './CorrectionLog';
 import { TierExplainer } from './TierExplainer';
 import { DealForm } from './DealForm';
+import { BulkDealImport } from './BulkDealImport';
 import { RevenueCharts } from './RevenueCharts';
 import { UserManagement } from './UserManagement';
 import { Button } from '@/components/ui/button';
@@ -27,7 +28,8 @@ import {
   Loader2,
   Users,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Upload
 } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO, subMonths, addMonths } from 'date-fns';
 
@@ -39,6 +41,7 @@ export function Dashboard({ userRole }: DashboardProps) {
   const { data: deals = [], isLoading: dealsLoading } = useDeals();
   const { data: corrections = [], isLoading: correctionsLoading } = useCorrections();
   const [showAddDeal, setShowAddDeal] = useState(false);
+  const [showBulkImport, setShowBulkImport] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState(new Date());
   
   const isAdmin = userRole === 'admin';
@@ -114,10 +117,16 @@ export function Dashboard({ userRole }: DashboardProps) {
           </div>
           
           {isAdmin && (
-            <Button onClick={() => setShowAddDeal(true)} className="gap-2">
-              <Plus className="w-4 h-4" />
-              Add New Deal
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => setShowBulkImport(true)} className="gap-2">
+                <Upload className="w-4 h-4" />
+                Bulk Import
+              </Button>
+              <Button onClick={() => setShowAddDeal(true)} className="gap-2">
+                <Plus className="w-4 h-4" />
+                Add Deal
+              </Button>
+            </div>
           )}
         </div>
 
@@ -221,6 +230,9 @@ export function Dashboard({ userRole }: DashboardProps) {
 
       {/* Add Deal Modal */}
       {showAddDeal && <DealForm onClose={() => setShowAddDeal(false)} isAdmin={isAdmin} />}
+      
+      {/* Bulk Import Modal */}
+      {showBulkImport && <BulkDealImport onClose={() => setShowBulkImport(false)} isAdmin={isAdmin} />}
     </div>
   );
 }
