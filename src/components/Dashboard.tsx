@@ -132,7 +132,7 @@ export function Dashboard({ userRole }: DashboardProps) {
         </div>
 
         {/* Safety Net Alert */}
-        <SafetyNetAlert deals={deals} />
+        <SafetyNetAlert deals={deals} selectedMonth={selectedMonth} />
 
         {/* Stats Grid - Bento Layout */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">

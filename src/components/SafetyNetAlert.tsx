@@ -4,19 +4,19 @@ import { parseISO } from 'date-fns';
 
 interface SafetyNetAlertProps {
   deals: Deal[];
+  selectedMonth: Date;
 }
 
 type AlertLevel = 'safe' | 'urgent' | 'very-urgent';
 
-export function SafetyNetAlert({ deals }: SafetyNetAlertProps) {
+export function SafetyNetAlert({ deals, selectedMonth }: SafetyNetAlertProps) {
   const getMonthlyRevenue = () => {
-    const now = new Date();
-    const currentMonth = now.getMonth();
-    const currentYear = now.getFullYear();
+    const targetMonth = selectedMonth.getMonth();
+    const targetYear = selectedMonth.getFullYear();
 
     const monthlyDeals = deals.filter((deal) => {
       const date = parseISO(deal.date_payment);
-      return date.getMonth() === currentMonth && date.getFullYear() === currentYear;
+      return date.getMonth() === targetMonth && date.getFullYear() === targetYear;
     });
 
     return monthlyDeals.reduce((sum, d) => sum + (d.net_revenue ?? 0), 0);
