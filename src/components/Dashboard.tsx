@@ -10,6 +10,7 @@ import { SafetyNetAlert } from './SafetyNetAlert';
 import { CorrectionLog } from './CorrectionLog';
 import { TierExplainer } from './TierExplainer';
 import { DealForm } from './DealForm';
+import { MonthlyCommissionSummary } from './MonthlyCommissionSummary';
 import { BulkDealImport } from './BulkDealImport';
 import { RevenueCharts } from './RevenueCharts';
 import { UserManagement } from './UserManagement';
@@ -190,11 +191,14 @@ export function Dashboard({ userRole }: DashboardProps) {
           </TabsList>
 
           <TabsContent value="monthly" className="space-y-6">
+            {/* Monthly Commission Summary */}
+            <MonthlyCommissionSummary deals={currentMonthDeals} />
+            
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Deals Table - Takes 2 columns */}
               <div className="lg:col-span-2">
                 <h3 className="text-lg font-display font-semibold mb-4">
-                  Deals This Month
+                  Deals This Month ({currentMonthDeals.length})
                 </h3>
                 <DealsTable deals={currentMonthDeals} isAdmin={isAdmin} />
               </div>
