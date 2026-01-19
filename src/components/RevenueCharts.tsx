@@ -6,6 +6,7 @@ import { format, parseISO, startOfMonth, endOfMonth, eachMonthOfInterval, subMon
 
 interface RevenueChartsProps {
   deals: Deal[];
+  selectedMonth: Date;
 }
 
 interface MarketerTierData {
@@ -18,7 +19,7 @@ interface MarketerTierData {
   color: string;
 }
 
-export function RevenueCharts({ deals }: RevenueChartsProps) {
+export function RevenueCharts({ deals, selectedMonth }: RevenueChartsProps) {
   // Monthly revenue data for last 6 months
   const monthlyData = useMemo(() => {
     const now = new Date();
@@ -51,12 +52,23 @@ export function RevenueCharts({ deals }: RevenueChartsProps) {
     });
   }, [deals]);
 
-  // Marketer tier distribution data
+  // Filter deals for selected month
+  const selectedMonthDeals = useMemo(() => {
+    const start = startOfMonth(selectedMonth);
+    const end = endOfMonth(selectedMonth);
+    
+    return deals.filter((deal) => {
+      const paymentDate = parseISO(deal.date_payment);
+      return paymentDate >= start && paymentDate <= end;
+    });
+  }, [deals, selectedMonth]);
+
+  // Marketer tier distribution data for selected month
   const marketerTierData = useMemo(() => {
-    // Group deals by marketer
+    // Group deals by marketer for the selected month
     const marketerMap = new Map<string, { email: string; netRevenue: number }>();
     
-    deals.forEach((deal) => {
+    selectedMonthDeals.forEach((deal) => {
       const email = deal.marketer_email ?? 'Unknown';
       const existing = marketerMap.get(email) || { email, netRevenue: 0 };
       existing.netRevenue += deal.net_revenue ?? 0;
@@ -99,7 +111,7 @@ export function RevenueCharts({ deals }: RevenueChartsProps) {
 
     // Sort by net revenue descending
     return data.sort((a, b) => b.netRevenue - a.netRevenue);
-  }, [deals]);
+  }, [selectedMonthDeals]);
 
   // Pie chart data for overall tier distribution
   const tierPieData = useMemo(() => {
@@ -218,7 +230,9 @@ export function RevenueCharts({ deals }: RevenueChartsProps) {
 
       {/* Tier Distribution by Marketer */}
       <div className="bento-card lg:col-span-2">
-        <h3 className="text-lg font-display font-semibold mb-4">Commission Tier Distribution by Marketer</h3>
+        <h3 className="text-lg font-display font-semibold mb-4">
+          Commission Tier Distribution by Marketer - {format(selectedMonth, 'MMMM yyyy')}
+        </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="h-[200px]">
             <ResponsiveContainer width="100%" height="100%">

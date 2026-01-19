@@ -212,7 +212,7 @@ export function Dashboard({ userRole }: DashboardProps) {
           </TabsContent>
 
           <TabsContent value="charts" className="space-y-6">
-            <RevenueCharts deals={deals} />
+            <RevenueCharts deals={deals} selectedMonth={selectedMonth} />
           </TabsContent>
 
           <TabsContent value="quarterly" className="space-y-6">
