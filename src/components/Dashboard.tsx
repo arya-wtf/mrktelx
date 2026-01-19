@@ -199,7 +199,7 @@ export function Dashboard({ userRole }: DashboardProps) {
       </div>
 
       {/* Add Deal Modal */}
-      {showAddDeal && <DealForm onClose={() => setShowAddDeal(false)} />}
+      {showAddDeal && <DealForm onClose={() => setShowAddDeal(false)} isAdmin={isAdmin} />}
     </div>
   );
 }

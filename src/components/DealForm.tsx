@@ -1,19 +1,28 @@
 import { useState } from 'react';
 import { useAddDeal } from '@/hooks/useDeals';
+import { useAllUsersWithRoles } from '@/hooks/useUserRole';
+import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { Plus, X, Loader2 } from 'lucide-react';
+import { Plus, X, Loader2, User } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface DealFormProps {
   onClose: () => void;
+  isAdmin: boolean;
 }
 
-export function DealForm({ onClose }: DealFormProps) {
+export function DealForm({ onClose, isAdmin }: DealFormProps) {
   const addDeal = useAddDeal();
+  const { user } = useAuth();
+  const { data: allUsers, isLoading: usersLoading } = useAllUsersWithRoles();
+  
+  // Filter to only show marketers for assignment
+  const marketers = allUsers?.filter(u => u.role === 'marketer') ?? [];
+  
   const [formData, setFormData] = useState({
     name: '',
     date_deal: '',
@@ -23,10 +32,21 @@ export function DealForm({ onClose }: DealFormProps) {
     platform_fee: '',
     is_retainer: false,
     retainer_month: '1',
+    assigned_user_id: '', // For admin to assign to marketer
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Determine which user_id to use
+    const targetUserId = isAdmin && formData.assigned_user_id 
+      ? formData.assigned_user_id 
+      : user?.id;
+    
+    if (!targetUserId) {
+      toast.error('No user selected');
+      return;
+    }
     
     try {
       await addDeal.mutateAsync({
@@ -38,6 +58,7 @@ export function DealForm({ onClose }: DealFormProps) {
         platform_fee: parseFloat(formData.platform_fee),
         is_retainer: formData.is_retainer,
         retainer_month: formData.is_retainer ? parseInt(formData.retainer_month) : 1,
+        user_id: targetUserId,
       });
       toast.success('Deal added successfully');
       onClose();
@@ -64,6 +85,34 @@ export function DealForm({ onClose }: DealFormProps) {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {isAdmin && (
+            <div>
+              <Label htmlFor="assigned_user">Assign to Marketer</Label>
+              <Select
+                value={formData.assigned_user_id}
+                onValueChange={(value) => setFormData({ ...formData, assigned_user_id: value })}
+              >
+                <SelectTrigger className="glass-input mt-1">
+                  <SelectValue placeholder={usersLoading ? "Loading..." : "Select a marketer"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {marketers.map((marketer) => (
+                    <SelectItem key={marketer.user_id} value={marketer.user_id}>
+                      <div className="flex items-center gap-2">
+                        <User className="w-4 h-4" />
+                        {marketer.email}
+                      </div>
+                    </SelectItem>
+                  ))}
+                  {marketers.length === 0 && !usersLoading && (
+                    <SelectItem value="" disabled>No marketers available</SelectItem>
+                  )}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground mt-1">Select the marketer who brought this deal</p>
+            </div>
+          )}
+          
           <div>
             <Label htmlFor="name">Client / Project Name</Label>
             <Input
