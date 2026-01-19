@@ -239,9 +239,17 @@ export function RevenueCharts({ deals }: RevenueChartsProps) {
                 <Tooltip 
                   formatter={(value: number) => formatCurrency(value)}
                   contentStyle={{
-                    backgroundColor: 'hsl(var(--card))',
-                    border: '1px solid hsl(var(--border))',
+                    backgroundColor: '#1a1a2e',
+                    border: '1px solid #3a3a5c',
                     borderRadius: '8px',
+                    color: '#ffffff',
+                  }}
+                  itemStyle={{
+                    color: '#ffffff',
+                  }}
+                  labelStyle={{
+                    color: '#ffffff',
+                    fontWeight: 'bold',
                   }}
                 />
                 <Legend />
