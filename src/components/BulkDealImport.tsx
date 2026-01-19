@@ -42,24 +42,61 @@ export function BulkDealImport({ onClose, isAdmin }: BulkDealImportProps) {
   const [isImporting, setIsImporting] = useState(false);
   const [importProgress, setImportProgress] = useState(0);
 
+  // Parse European number format (1.234,56 -> 1234.56)
+  const parseEuropeanNumber = (value: string): number => {
+    if (!value) return 0;
+    // Remove thousands separator (.) and replace decimal comma with dot
+    const normalized = value.replace(/\./g, '').replace(',', '.');
+    return parseFloat(normalized) || 0;
+  };
+
+  // Parse date in DD/MM/YY format to YYYY-MM-DD
+  const parseEuropeanDate = (dateStr: string): string => {
+    if (!dateStr) return '';
+    const parts = dateStr.split('/');
+    if (parts.length !== 3) return dateStr; // Return as-is if not DD/MM/YY
+    
+    const day = parts[0].padStart(2, '0');
+    const month = parts[1].padStart(2, '0');
+    let year = parts[2];
+    
+    // Handle 2-digit year
+    if (year.length === 2) {
+      const yearNum = parseInt(year);
+      year = yearNum >= 50 ? `19${year}` : `20${year}`;
+    }
+    
+    return `${year}-${month}-${day}`;
+  };
+
   const parseCSV = (text: string): ParsedDeal[] => {
     const lines = text.trim().split('\n');
     if (lines.length < 2) return [];
     
-    const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+    // Detect delimiter (semicolon or comma)
+    const firstLine = lines[0];
+    const delimiter = firstLine.includes(';') ? ';' : ',';
+    
+    const headers = firstLine.split(delimiter).map(h => h.trim().toLowerCase());
     const deals: ParsedDeal[] = [];
     
     for (let i = 1; i < lines.length; i++) {
-      const values = lines[i].split(',').map(v => v.trim());
+      const values = lines[i].split(delimiter).map(v => v.trim());
       if (values.length < 6) continue;
+      
+      const rawDateDeal = values[headers.indexOf('date_deal')] || '';
+      const rawDatePayment = values[headers.indexOf('date_payment')] || '';
+      const rawDateDone = values[headers.indexOf('estimate_date_done')] || '';
+      const rawAmount = values[headers.indexOf('amount_paid')] || '0';
+      const rawFee = values[headers.indexOf('platform_fee')] || '0';
       
       const deal: ParsedDeal = {
         name: values[headers.indexOf('name')] || '',
-        date_deal: values[headers.indexOf('date_deal')] || '',
-        date_payment: values[headers.indexOf('date_payment')] || '',
-        estimate_date_done: values[headers.indexOf('estimate_date_done')] || '',
-        amount_paid: parseFloat(values[headers.indexOf('amount_paid')]) || 0,
-        platform_fee: parseFloat(values[headers.indexOf('platform_fee')]) || 0,
+        date_deal: parseEuropeanDate(rawDateDeal),
+        date_payment: parseEuropeanDate(rawDatePayment),
+        estimate_date_done: parseEuropeanDate(rawDateDone),
+        amount_paid: parseEuropeanNumber(rawAmount),
+        platform_fee: parseEuropeanNumber(rawFee),
         is_retainer: values[headers.indexOf('is_retainer')]?.toLowerCase() === 'true',
         retainer_month: parseInt(values[headers.indexOf('retainer_month')]) || 1,
         status: 'pending',
