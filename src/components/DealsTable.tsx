@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Deal, useUpdateDeal, useDeleteDeal } from '@/hooks/useDeals';
+import { Deal, useUpdateDeal, useDeleteDeal, useMarketers } from '@/hooks/useDeals';
 import { formatCurrency } from '@/lib/commission';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
@@ -16,11 +16,21 @@ interface DealsTableProps {
   isAdmin: boolean;
 }
 
+interface EditData {
+  name?: string;
+  amount_paid?: number;
+  platform_fee?: number;
+  is_retainer?: boolean;
+  retainer_month?: number;
+  user_id?: string;
+}
+
 export function DealsTable({ deals, isAdmin }: DealsTableProps) {
   const updateDeal = useUpdateDeal();
   const deleteDeal = useDeleteDeal();
+  const { data: marketers = [] } = useMarketers();
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editData, setEditData] = useState<Partial<Deal>>({});
+  const [editData, setEditData] = useState<EditData>({});
 
   const startEditing = (deal: Deal) => {
     setEditingId(deal.id);
@@ -30,6 +40,7 @@ export function DealsTable({ deals, isAdmin }: DealsTableProps) {
       platform_fee: deal.platform_fee,
       is_retainer: deal.is_retainer,
       retainer_month: deal.retainer_month,
+      user_id: deal.user_id,
     });
   };
 
@@ -131,7 +142,25 @@ export function DealsTable({ deals, isAdmin }: DealsTableProps) {
                   </TableCell>
                   {isAdmin && (
                     <TableCell className="text-muted-foreground text-sm">
-                      {deal.marketer_email ?? 'Unknown'}
+                      {isEditing ? (
+                        <Select
+                          value={editData.user_id ?? ''}
+                          onValueChange={(value) => setEditData({ ...editData, user_id: value })}
+                        >
+                          <SelectTrigger className="h-8 w-40 glass-input">
+                            <SelectValue placeholder="Select marketer" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {marketers.map((m) => (
+                              <SelectItem key={m.user_id} value={m.user_id}>
+                                {m.email}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        deal.marketer_email ?? 'Unknown'
+                      )}
                     </TableCell>
                   )}
                   <TableCell className="text-muted-foreground">

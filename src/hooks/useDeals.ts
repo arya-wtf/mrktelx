@@ -47,6 +47,24 @@ export function useDeals() {
   });
 }
 
+export function useMarketers() {
+  const { user } = useAuth();
+  
+  return useQuery({
+    queryKey: ['marketers'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('user_id, email')
+        .order('email');
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user,
+  });
+}
+
 export function useAddDeal() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
