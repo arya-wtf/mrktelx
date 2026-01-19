@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { format } from 'date-fns';
 import { useAddDeal } from '@/hooks/useDeals';
 import { useAllUsersWithRoles } from '@/hooks/useUserRole';
 import { useAuth } from '@/hooks/useAuth';
@@ -7,8 +8,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { Plus, X, Loader2, User } from 'lucide-react';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Plus, X, Loader2, User, CalendarIcon } from 'lucide-react';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 
 interface DealFormProps {
   onClose: () => void;
@@ -25,18 +29,24 @@ export function DealForm({ onClose, isAdmin }: DealFormProps) {
   
   const [formData, setFormData] = useState({
     name: '',
-    date_deal: '',
-    date_payment: '',
-    estimate_date_done: '',
+    date_deal: undefined as Date | undefined,
+    date_payment: undefined as Date | undefined,
+    estimate_date_done: undefined as Date | undefined,
     amount_paid: '',
     platform_fee: '',
     is_retainer: false,
     retainer_month: '1',
-    assigned_user_id: '', // For admin to assign to marketer
+    assigned_user_id: '',
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate dates
+    if (!formData.date_deal || !formData.date_payment || !formData.estimate_date_done) {
+      toast.error('Please select all dates');
+      return;
+    }
     
     // Determine which user_id to use
     const targetUserId = isAdmin && formData.assigned_user_id 
@@ -51,9 +61,9 @@ export function DealForm({ onClose, isAdmin }: DealFormProps) {
     try {
       await addDeal.mutateAsync({
         name: formData.name,
-        date_deal: formData.date_deal,
-        date_payment: formData.date_payment,
-        estimate_date_done: formData.estimate_date_done,
+        date_deal: format(formData.date_deal, 'yyyy-MM-dd'),
+        date_payment: format(formData.date_payment, 'yyyy-MM-dd'),
+        estimate_date_done: format(formData.estimate_date_done, 'yyyy-MM-dd'),
         amount_paid: parseFloat(formData.amount_paid),
         platform_fee: parseFloat(formData.platform_fee),
         is_retainer: formData.is_retainer,
@@ -73,7 +83,7 @@ export function DealForm({ onClose, isAdmin }: DealFormProps) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm animate-fade-in">
-      <div className="bento-card w-full max-w-lg mx-4 animate-slide-up">
+      <div className="bento-card w-full max-w-lg mx-4 animate-slide-up max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-display font-bold">Add New Deal</h2>
           <button
@@ -128,39 +138,84 @@ export function DealForm({ onClose, isAdmin }: DealFormProps) {
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="date_deal">Date Deal Signed</Label>
-              <Input
-                id="date_deal"
-                type="date"
-                value={formData.date_deal}
-                onChange={(e) => setFormData({ ...formData, date_deal: e.target.value })}
-                className="glass-input mt-1"
-                required
-              />
+              <Label>Date Deal Signed</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal glass-input mt-1",
+                      !formData.date_deal && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {formData.date_deal ? format(formData.date_deal, "PPP") : <span>Pick a date</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={formData.date_deal}
+                    onSelect={(date) => setFormData({ ...formData, date_deal: date })}
+                    initialFocus
+                    className={cn("p-3 pointer-events-auto")}
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
             <div>
-              <Label htmlFor="date_payment">Date Payment Received</Label>
-              <Input
-                id="date_payment"
-                type="date"
-                value={formData.date_payment}
-                onChange={(e) => setFormData({ ...formData, date_payment: e.target.value })}
-                className="glass-input mt-1"
-                required
-              />
+              <Label>Date Payment Received</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal glass-input mt-1",
+                      !formData.date_payment && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {formData.date_payment ? format(formData.date_payment, "PPP") : <span>Pick a date</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={formData.date_payment}
+                    onSelect={(date) => setFormData({ ...formData, date_payment: date })}
+                    initialFocus
+                    className={cn("p-3 pointer-events-auto")}
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
           </div>
 
           <div>
-            <Label htmlFor="estimate_date_done">Estimated Completion Date</Label>
-            <Input
-              id="estimate_date_done"
-              type="date"
-              value={formData.estimate_date_done}
-              onChange={(e) => setFormData({ ...formData, estimate_date_done: e.target.value })}
-              className="glass-input mt-1"
-              required
-            />
+            <Label>Estimated Completion Date</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "w-full justify-start text-left font-normal glass-input mt-1",
+                    !formData.estimate_date_done && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {formData.estimate_date_done ? format(formData.estimate_date_done, "PPP") : <span>Pick a date</span>}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={formData.estimate_date_done}
+                  onSelect={(date) => setFormData({ ...formData, estimate_date_done: date })}
+                  initialFocus
+                  className={cn("p-3 pointer-events-auto")}
+                />
+              </PopoverContent>
+            </Popover>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
