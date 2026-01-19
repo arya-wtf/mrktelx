@@ -1,0 +1,6 @@
+name,date_deal,date_payment,estimate_date_done,amount_paid,platform_fee,is_retainer,retainer_month
+TechCorp Website Redesign,2025-12-01,2025-12-05,2026-01-15,2500.00,250.00,false,1
+StartupXYZ Branding,2025-12-10,2025-12-12,2026-02-01,1800.00,180.00,false,1
+Acme Corp Monthly Retainer,2025-12-15,2025-12-20,2026-01-20,3500.00,350.00,true,1
+BigCo Marketing Campaign,2025-12-20,2025-12-22,2026-01-30,4200.00,420.00,false,1
+SmallBiz Logo Design,2025-12-25,2025-12-28,2026-01-10,800.00,80.00,false,1
