@@ -1,11 +1,21 @@
 import { useMemo } from 'react';
 import { Deal } from '@/hooks/useDeals';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, PieChart, Pie, Cell, Legend } from 'recharts';
-import { formatCurrency } from '@/lib/commission';
+import { formatCurrency, calculateTieredCommission } from '@/lib/commission';
 import { format, parseISO, startOfMonth, endOfMonth, eachMonthOfInterval, subMonths } from 'date-fns';
 
 interface RevenueChartsProps {
   deals: Deal[];
+}
+
+interface MarketerTierData {
+  marketer: string;
+  netRevenue: number;
+  tier: 1 | 2 | 3;
+  tierLabel: string;
+  commission: number;
+  commissionRate: string;
+  color: string;
 }
 
 export function RevenueCharts({ deals }: RevenueChartsProps) {
@@ -41,21 +51,70 @@ export function RevenueCharts({ deals }: RevenueChartsProps) {
     });
   }, [deals]);
 
-  // Tier distribution
-  const tierData = useMemo(() => {
-    let tier1 = 0, tier2 = 0, tier3 = 0;
+  // Marketer tier distribution data
+  const marketerTierData = useMemo(() => {
+    // Group deals by marketer
+    const marketerMap = new Map<string, { email: string; netRevenue: number }>();
     
     deals.forEach((deal) => {
-      const net = deal.net_revenue ?? 0;
-      if (net <= 1500) {
-        tier1 += net;
-      } else if (net <= 3000) {
+      const email = deal.marketer_email ?? 'Unknown';
+      const existing = marketerMap.get(email) || { email, netRevenue: 0 };
+      existing.netRevenue += deal.net_revenue ?? 0;
+      marketerMap.set(email, existing);
+    });
+
+    // Calculate tier for each marketer
+    const tierColors = {
+      1: 'hsl(var(--muted))',
+      2: 'hsl(var(--primary))',
+      3: 'hsl(var(--success))',
+    };
+
+    const tierLabels = {
+      1: 'Tier 1 (0%)',
+      2: 'Tier 2 (8%)',
+      3: 'Tier 3 (12%)',
+    };
+
+    const tierRates = {
+      1: '0%',
+      2: '8%',
+      3: '12%',
+    };
+
+    const data: MarketerTierData[] = [];
+    
+    marketerMap.forEach(({ email, netRevenue }) => {
+      const { tier, commission } = calculateTieredCommission(netRevenue);
+      data.push({
+        marketer: email,
+        netRevenue,
+        tier,
+        tierLabel: tierLabels[tier],
+        commission,
+        commissionRate: tierRates[tier],
+        color: tierColors[tier],
+      });
+    });
+
+    // Sort by net revenue descending
+    return data.sort((a, b) => b.netRevenue - a.netRevenue);
+  }, [deals]);
+
+  // Pie chart data for overall tier distribution
+  const tierPieData = useMemo(() => {
+    let tier1 = 0, tier2 = 0, tier3 = 0;
+    
+    marketerTierData.forEach(({ netRevenue }) => {
+      if (netRevenue <= 1500) {
+        tier1 += netRevenue;
+      } else if (netRevenue <= 3000) {
         tier1 += 1500;
-        tier2 += net - 1500;
+        tier2 += netRevenue - 1500;
       } else {
         tier1 += 1500;
         tier2 += 1500;
-        tier3 += net - 3000;
+        tier3 += netRevenue - 3000;
       }
     });
 
@@ -64,7 +123,7 @@ export function RevenueCharts({ deals }: RevenueChartsProps) {
       { name: 'Tier 2 (8%)', value: tier2, color: 'hsl(var(--primary))' },
       { name: 'Tier 3 (12%)', value: tier3, color: 'hsl(var(--success))' },
     ].filter(t => t.value > 0);
-  }, [deals]);
+  }, [marketerTierData]);
 
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
@@ -157,15 +216,15 @@ export function RevenueCharts({ deals }: RevenueChartsProps) {
         </div>
       </div>
 
-      {/* Tier Distribution */}
+      {/* Tier Distribution by Marketer */}
       <div className="bento-card lg:col-span-2">
-        <h3 className="text-lg font-display font-semibold mb-4">Commission Tier Distribution</h3>
+        <h3 className="text-lg font-display font-semibold mb-4">Commission Tier Distribution by Marketer</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="h-[200px]">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
-                  data={tierData}
+                  data={tierPieData}
                   cx="50%"
                   cy="50%"
                   innerRadius={50}
@@ -173,7 +232,7 @@ export function RevenueCharts({ deals }: RevenueChartsProps) {
                   paddingAngle={2}
                   dataKey="value"
                 >
-                  {tierData.map((entry, index) => (
+                  {tierPieData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
                 </Pie>
@@ -189,17 +248,23 @@ export function RevenueCharts({ deals }: RevenueChartsProps) {
               </PieChart>
             </ResponsiveContainer>
           </div>
-          <div className="flex flex-col justify-center space-y-3">
-            {tierData.map((tier, index) => (
+          <div className="flex flex-col justify-center space-y-2 max-h-[250px] overflow-y-auto">
+            {marketerTierData.map((item, index) => (
               <div key={index} className="flex items-center justify-between p-3 rounded-lg bg-secondary/30">
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 flex-1 min-w-0">
                   <div 
-                    className="w-3 h-3 rounded-full" 
-                    style={{ backgroundColor: tier.color }}
+                    className="w-3 h-3 rounded-full flex-shrink-0" 
+                    style={{ backgroundColor: item.color }}
                   />
-                  <span className="text-sm font-medium">{tier.name}</span>
+                  <div className="min-w-0">
+                    <span className="text-sm font-medium block truncate">{item.marketer}</span>
+                    <span className="text-xs text-muted-foreground">{item.tierLabel}</span>
+                  </div>
                 </div>
-                <span className="font-semibold">{formatCurrency(tier.value)}</span>
+                <div className="text-right flex-shrink-0 ml-2">
+                  <span className="font-semibold block">{formatCurrency(item.netRevenue)}</span>
+                  <span className="text-xs text-muted-foreground">Commission: {formatCurrency(item.commission)}</span>
+                </div>
               </div>
             ))}
           </div>
