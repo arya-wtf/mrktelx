@@ -98,6 +98,9 @@ export function DealsTable({ deals, isAdmin }: DealsTableProps) {
           <TableHeader>
             <TableRow className="border-border/50 hover:bg-transparent">
               <TableHead className="text-muted-foreground font-medium">Project</TableHead>
+              {isAdmin && (
+                <TableHead className="text-muted-foreground font-medium">Marketer</TableHead>
+              )}
               <TableHead className="text-muted-foreground font-medium">Payment Date</TableHead>
               <TableHead className="text-muted-foreground font-medium text-right">Gross</TableHead>
               <TableHead className="text-muted-foreground font-medium text-right">Fee</TableHead>
@@ -126,6 +129,11 @@ export function DealsTable({ deals, isAdmin }: DealsTableProps) {
                       deal.name
                     )}
                   </TableCell>
+                  {isAdmin && (
+                    <TableCell className="text-muted-foreground text-sm">
+                      {deal.marketer_email ?? 'Unknown'}
+                    </TableCell>
+                  )}
                   <TableCell className="text-muted-foreground">
                     {format(new Date(deal.date_payment), 'MMM d, yyyy')}
                   </TableCell>

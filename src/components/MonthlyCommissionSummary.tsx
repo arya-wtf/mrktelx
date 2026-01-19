@@ -1,27 +1,50 @@
+import { useMemo } from 'react';
 import { Deal } from '@/hooks/useDeals';
 import { calculateTieredCommission, formatCurrency, formatPercentage, COMMISSION_TIERS } from '@/lib/commission';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { TrendingUp, Target, DollarSign } from 'lucide-react';
+import { TrendingUp, Target, DollarSign, User } from 'lucide-react';
 
 interface MonthlyCommissionSummaryProps {
   deals: Deal[];
+  isAdmin?: boolean;
 }
 
-export function MonthlyCommissionSummary({ deals }: MonthlyCommissionSummaryProps) {
-  const totalNetRevenue = deals.reduce((sum, deal) => sum + (deal.net_revenue ?? 0), 0);
-  const { commission, tier, breakdown } = calculateTieredCommission(totalNetRevenue);
-  
-  const tierInfo = COMMISSION_TIERS.find(t => t.tier === tier);
-  const currentRate = tierInfo?.rate ?? 0;
-  
-  // Calculate how much more to next tier
+interface MarketerSummary {
+  email: string;
+  totalNetRevenue: number;
+  commission: number;
+  tier: number;
+  rate: number;
+}
+
+function CommissionCard({ 
+  label,
+  totalNetRevenue, 
+  commission, 
+  tier, 
+  rate,
+  showProgress = true 
+}: { 
+  label?: string;
+  totalNetRevenue: number; 
+  commission: number; 
+  tier: number;
+  rate: number;
+  showProgress?: boolean;
+}) {
   const nextTierThreshold = tier === 1 ? 1500 : tier === 2 ? 3000 : null;
   const amountToNextTier = nextTierThreshold ? nextTierThreshold - totalNetRevenue : null;
 
   return (
     <Card className="bg-gradient-to-br from-primary/5 to-secondary/30 border-primary/20">
       <CardContent className="p-4">
+        {label && (
+          <div className="flex items-center gap-2 mb-3 pb-3 border-b border-border/50">
+            <User className="w-4 h-4 text-muted-foreground" />
+            <span className="text-sm font-medium">{label}</span>
+          </div>
+        )}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           {/* Total Revenue */}
           <div className="flex items-center gap-3">
@@ -48,7 +71,7 @@ export function MonthlyCommissionSummary({ deals }: MonthlyCommissionSummaryProp
                 >
                   Tier {tier}
                 </Badge>
-                <span className="text-lg font-semibold">{formatPercentage(currentRate)}</span>
+                <span className="text-lg font-semibold">{formatPercentage(rate)}</span>
               </div>
             </div>
           </div>
@@ -66,7 +89,7 @@ export function MonthlyCommissionSummary({ deals }: MonthlyCommissionSummaryProp
         </div>
 
         {/* Progress to next tier */}
-        {amountToNextTier !== null && amountToNextTier > 0 && (
+        {showProgress && amountToNextTier !== null && amountToNextTier > 0 && (
           <div className="mt-4 pt-4 border-t border-border/50">
             <p className="text-sm text-muted-foreground">
               <span className="font-medium text-foreground">{formatCurrency(amountToNextTier)}</span> more to reach{' '}
@@ -78,7 +101,7 @@ export function MonthlyCommissionSummary({ deals }: MonthlyCommissionSummaryProp
         )}
 
         {/* Tier 3 achievement */}
-        {tier === 3 && (
+        {showProgress && tier === 3 && (
           <div className="mt-4 pt-4 border-t border-border/50">
             <p className="text-sm text-green-500 font-medium">
               🎉 Maximum tier achieved! Earning 12% on revenue above $3,000
@@ -87,5 +110,74 @@ export function MonthlyCommissionSummary({ deals }: MonthlyCommissionSummaryProp
         )}
       </CardContent>
     </Card>
+  );
+}
+
+export function MonthlyCommissionSummary({ deals, isAdmin = false }: MonthlyCommissionSummaryProps) {
+  // Group deals by marketer for admin view
+  const marketerSummaries = useMemo(() => {
+    if (!isAdmin) return null;
+    
+    const grouped = deals.reduce((acc, deal) => {
+      const email = deal.marketer_email ?? 'Unknown';
+      if (!acc[email]) {
+        acc[email] = { email, deals: [] };
+      }
+      acc[email].deals.push(deal);
+      return acc;
+    }, {} as Record<string, { email: string; deals: Deal[] }>);
+
+    return Object.values(grouped).map(({ email, deals }) => {
+      const totalNetRevenue = deals.reduce((sum, d) => sum + (d.net_revenue ?? 0), 0);
+      const { commission, tier } = calculateTieredCommission(totalNetRevenue);
+      const tierInfo = COMMISSION_TIERS.find(t => t.tier === tier);
+      return {
+        email,
+        totalNetRevenue,
+        commission,
+        tier,
+        rate: tierInfo?.rate ?? 0,
+      };
+    }).sort((a, b) => b.totalNetRevenue - a.totalNetRevenue);
+  }, [deals, isAdmin]);
+
+  // For non-admin, show single summary
+  if (!isAdmin) {
+    const totalNetRevenue = deals.reduce((sum, deal) => sum + (deal.net_revenue ?? 0), 0);
+    const { commission, tier } = calculateTieredCommission(totalNetRevenue);
+    const tierInfo = COMMISSION_TIERS.find(t => t.tier === tier);
+
+    return (
+      <CommissionCard
+        totalNetRevenue={totalNetRevenue}
+        commission={commission}
+        tier={tier}
+        rate={tierInfo?.rate ?? 0}
+      />
+    );
+  }
+
+  // Admin view: show per-marketer summaries
+  if (!marketerSummaries || marketerSummaries.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="space-y-4">
+      <h3 className="text-sm font-medium text-muted-foreground">Commission by Marketer</h3>
+      <div className="grid grid-cols-1 gap-4">
+        {marketerSummaries.map((summary) => (
+          <CommissionCard
+            key={summary.email}
+            label={summary.email}
+            totalNetRevenue={summary.totalNetRevenue}
+            commission={summary.commission}
+            tier={summary.tier}
+            rate={summary.rate}
+            showProgress={false}
+          />
+        ))}
+      </div>
+    </div>
   );
 }

@@ -192,7 +192,7 @@ export function Dashboard({ userRole }: DashboardProps) {
 
           <TabsContent value="monthly" className="space-y-6">
             {/* Monthly Commission Summary */}
-            <MonthlyCommissionSummary deals={currentMonthDeals} />
+            <MonthlyCommissionSummary deals={currentMonthDeals} isAdmin={isAdmin} />
             
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Deals Table - Takes 2 columns */}
