@@ -53,6 +53,12 @@ export function calculateRetainerMultiplier(month: number): number {
 
 export function calculateDealCommission(deal: Deal): number {
   const { commission } = calculateTieredCommission(deal.netRevenue);
+  
+  // Project deals get full commission, retainer deals apply multiplier
+  if (!deal.isRetainer) {
+    return commission;
+  }
+  
   const multiplier = calculateRetainerMultiplier(deal.retainerMonth);
   return commission * multiplier;
 }

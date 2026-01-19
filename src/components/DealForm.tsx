@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import { Plus, X, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -20,6 +21,7 @@ export function DealForm({ onClose }: DealFormProps) {
     estimate_date_done: '',
     amount_paid: '',
     platform_fee: '',
+    is_retainer: false,
     retainer_month: '1',
   });
 
@@ -34,7 +36,8 @@ export function DealForm({ onClose }: DealFormProps) {
         estimate_date_done: formData.estimate_date_done,
         amount_paid: parseFloat(formData.amount_paid),
         platform_fee: parseFloat(formData.platform_fee),
-        retainer_month: parseInt(formData.retainer_month),
+        is_retainer: formData.is_retainer,
+        retainer_month: formData.is_retainer ? parseInt(formData.retainer_month) : 1,
       });
       toast.success('Deal added successfully');
       onClose();
@@ -156,23 +159,37 @@ export function DealForm({ onClose }: DealFormProps) {
             </div>
           )}
 
-          <div>
-            <Label htmlFor="retainer_month">Retainer Month</Label>
-            <Select
-              value={formData.retainer_month}
-              onValueChange={(value) => setFormData({ ...formData, retainer_month: value })}
-            >
-              <SelectTrigger className="glass-input mt-1">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="1">Month 1 (100% commission)</SelectItem>
-                <SelectItem value="2">Month 2 (50% commission)</SelectItem>
-                <SelectItem value="3">Month 3 (50% commission)</SelectItem>
-                <SelectItem value="4">Month 4+ (0% commission)</SelectItem>
-              </SelectContent>
-            </Select>
+          <div className="flex items-center justify-between p-4 rounded-lg bg-secondary/30 border border-border/50">
+            <div>
+              <Label htmlFor="is_retainer" className="text-base font-medium">Retainer Deal</Label>
+              <p className="text-sm text-muted-foreground">Enable for recurring retainer clients</p>
+            </div>
+            <Switch
+              id="is_retainer"
+              checked={formData.is_retainer}
+              onCheckedChange={(checked) => setFormData({ ...formData, is_retainer: checked })}
+            />
           </div>
+
+          {formData.is_retainer && (
+            <div>
+              <Label htmlFor="retainer_month">Retainer Month</Label>
+              <Select
+                value={formData.retainer_month}
+                onValueChange={(value) => setFormData({ ...formData, retainer_month: value })}
+              >
+                <SelectTrigger className="glass-input mt-1">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="1">Month 1 (100% commission)</SelectItem>
+                  <SelectItem value="2">Month 2 (50% commission)</SelectItem>
+                  <SelectItem value="3">Month 3 (50% commission)</SelectItem>
+                  <SelectItem value="4">Month 4+ (0% commission)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           <div className="flex gap-3 pt-4">
             <Button

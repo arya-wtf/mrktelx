@@ -63,6 +63,7 @@ export type Database = {
           date_payment: string
           estimate_date_done: string
           id: string
+          is_retainer: boolean
           name: string
           net_revenue: number | null
           platform_fee: number
@@ -77,6 +78,7 @@ export type Database = {
           date_payment: string
           estimate_date_done: string
           id?: string
+          is_retainer?: boolean
           name: string
           net_revenue?: number | null
           platform_fee?: number
@@ -91,6 +93,7 @@ export type Database = {
           date_payment?: string
           estimate_date_done?: string
           id?: string
+          is_retainer?: boolean
           name?: string
           net_revenue?: number | null
           platform_fee?: number

@@ -5,7 +5,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Trash2, Edit2, Check, X, DollarSign, Loader2 } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { Trash2, Edit2, Check, X, DollarSign, Loader2, Briefcase, RefreshCw } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -27,6 +28,7 @@ export function DealsTable({ deals, isAdmin }: DealsTableProps) {
       name: deal.name,
       amount_paid: deal.amount_paid,
       platform_fee: deal.platform_fee,
+      is_retainer: deal.is_retainer,
       retainer_month: deal.retainer_month,
     });
   };
@@ -59,11 +61,29 @@ export function DealsTable({ deals, isAdmin }: DealsTableProps) {
     }
   };
 
-  const getRetainerBadge = (month: number) => {
-    const multiplier = calculateRetainerMultiplier(month);
-    if (multiplier === 1) return <span className="tier-badge tier-3">100%</span>;
-    if (multiplier === 0.5) return <span className="tier-badge tier-2">50%</span>;
-    return <span className="tier-badge tier-1">0%</span>;
+  const getDealTypeBadge = (deal: Deal) => {
+    if (deal.is_retainer) {
+      const multiplier = calculateRetainerMultiplier(deal.retainer_month);
+      const label = multiplier === 1 ? '100%' : multiplier === 0.5 ? '50%' : '0%';
+      return (
+        <div className="flex flex-col items-center gap-1">
+          <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400">
+            <RefreshCw className="w-3 h-3" />
+            Retainer
+          </span>
+          <span className={cn(
+            "tier-badge",
+            multiplier === 1 ? "tier-3" : multiplier === 0.5 ? "tier-2" : "tier-1"
+          )}>M{deal.retainer_month > 3 ? '4+' : deal.retainer_month} ({label})</span>
+        </div>
+      );
+    }
+    return (
+      <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400">
+        <Briefcase className="w-3 h-3" />
+        Project
+      </span>
+    );
   };
 
   const calculateCommission = (deal: Deal) => {
@@ -76,6 +96,12 @@ export function DealsTable({ deals, isAdmin }: DealsTableProps) {
       commission = (netRevenue - 1500) * 0.08;
     }
     
+    // Project deals get full commission
+    if (!deal.is_retainer) {
+      return commission;
+    }
+    
+    // Retainer deals apply multiplier
     const multiplier = calculateRetainerMultiplier(deal.retainer_month);
     return commission * multiplier;
   };
@@ -100,7 +126,7 @@ export function DealsTable({ deals, isAdmin }: DealsTableProps) {
               <TableHead className="text-muted-foreground font-medium text-right">Gross</TableHead>
               <TableHead className="text-muted-foreground font-medium text-right">Fee</TableHead>
               <TableHead className="text-muted-foreground font-medium text-right">Net</TableHead>
-              <TableHead className="text-muted-foreground font-medium text-center">Retainer</TableHead>
+              <TableHead className="text-muted-foreground font-medium text-center">Type</TableHead>
               <TableHead className="text-muted-foreground font-medium text-right">Commission</TableHead>
               {isAdmin && (
                 <TableHead className="text-muted-foreground font-medium text-center">Actions</TableHead>
@@ -159,22 +185,33 @@ export function DealsTable({ deals, isAdmin }: DealsTableProps) {
                   </TableCell>
                   <TableCell className="text-center">
                     {isEditing ? (
-                      <Select
-                        value={String(editData.retainer_month ?? 1)}
-                        onValueChange={(value) => setEditData({ ...editData, retainer_month: parseInt(value) })}
-                      >
-                        <SelectTrigger className="h-8 w-20 glass-input">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="1">M1</SelectItem>
-                          <SelectItem value="2">M2</SelectItem>
-                          <SelectItem value="3">M3</SelectItem>
-                          <SelectItem value="4">M4+</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <div className="flex flex-col items-center gap-2">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-muted-foreground">Retainer</span>
+                          <Switch
+                            checked={editData.is_retainer ?? false}
+                            onCheckedChange={(checked) => setEditData({ ...editData, is_retainer: checked })}
+                          />
+                        </div>
+                        {editData.is_retainer && (
+                          <Select
+                            value={String(editData.retainer_month ?? 1)}
+                            onValueChange={(value) => setEditData({ ...editData, retainer_month: parseInt(value) })}
+                          >
+                            <SelectTrigger className="h-8 w-20 glass-input">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="1">M1</SelectItem>
+                              <SelectItem value="2">M2</SelectItem>
+                              <SelectItem value="3">M3</SelectItem>
+                              <SelectItem value="4">M4+</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        )}
+                      </div>
                     ) : (
-                      getRetainerBadge(deal.retainer_month)
+                      getDealTypeBadge(deal)
                     )}
                   </TableCell>
                   <TableCell className="text-right font-medium text-success">

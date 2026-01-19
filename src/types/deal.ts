@@ -7,7 +7,8 @@ export interface Deal {
   amountPaid: number;
   platformFee: number;
   netRevenue: number;
-  retainerMonth: number; // 1, 2, 3, or 4+
+  isRetainer: boolean; // true = retainer deal, false = project deal
+  retainerMonth: number; // 1, 2, 3, or 4+ (only applies when isRetainer = true)
   createdAt: string;
 }
 
