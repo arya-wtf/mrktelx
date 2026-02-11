@@ -57,6 +57,7 @@ export type Database = {
       }
       deals: {
         Row: {
+          admin_notes: string | null
           amount_paid: number
           created_at: string
           date_deal: string
@@ -68,10 +69,14 @@ export type Database = {
           net_revenue: number | null
           platform_fee: number
           retainer_month: number
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: Database["public"]["Enums"]["deal_status"]
           updated_at: string
           user_id: string
         }
         Insert: {
+          admin_notes?: string | null
           amount_paid?: number
           created_at?: string
           date_deal: string
@@ -83,10 +88,14 @@ export type Database = {
           net_revenue?: number | null
           platform_fee?: number
           retainer_month?: number
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: Database["public"]["Enums"]["deal_status"]
           updated_at?: string
           user_id: string
         }
         Update: {
+          admin_notes?: string | null
           amount_paid?: number
           created_at?: string
           date_deal?: string
@@ -98,6 +107,9 @@ export type Database = {
           net_revenue?: number | null
           platform_fee?: number
           retainer_month?: number
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: Database["public"]["Enums"]["deal_status"]
           updated_at?: string
           user_id?: string
         }
@@ -195,6 +207,7 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "marketer"
+      deal_status: "pending" | "approved" | "rejected"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -323,6 +336,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "marketer"],
+      deal_status: ["pending", "approved", "rejected"],
     },
   },
 } as const

@@ -5,6 +5,10 @@ import { Tables, TablesInsert, TablesUpdate } from '@/integrations/supabase/type
 
 export type Deal = Tables<'deals'> & {
   marketer_email?: string;
+  status?: string;
+  admin_notes?: string | null;
+  reviewed_at?: string | null;
+  reviewed_by?: string | null;
 };
 export type DealInsert = TablesInsert<'deals'>;
 export type DealUpdate = TablesUpdate<'deals'>;
@@ -70,15 +74,19 @@ export function useAddDeal() {
   const { user } = useAuth();
 
   return useMutation({
-    mutationFn: async (deal: Omit<DealInsert, 'user_id'> & { user_id?: string }) => {
+    mutationFn: async (deal: Omit<DealInsert, 'user_id'> & { user_id?: string; isAdmin?: boolean }) => {
       if (!user) throw new Error('Not authenticated');
       
+      const { isAdmin, ...dealData } = deal;
       // Use provided user_id (admin assigning to marketer) or fall back to current user
-      const targetUserId = deal.user_id || user.id;
+      const targetUserId = dealData.user_id || user.id;
+      
+      // Admin deals are auto-approved, marketer deals are pending
+      const status = isAdmin ? 'approved' : 'pending';
       
       const { data, error } = await supabase
         .from('deals')
-        .insert({ ...deal, user_id: targetUserId })
+        .insert({ ...dealData, user_id: targetUserId, status: status as any })
         .select()
         .single();
       
@@ -186,6 +194,98 @@ export function useDeleteCorrection() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['corrections'] });
+    },
+  });
+}
+
+export function usePendingDeals() {
+  const { user } = useAuth();
+  
+  return useQuery({
+    queryKey: ['deals', 'pending'],
+    queryFn: async () => {
+      if (!user) return [];
+      
+      const { data: deals, error } = await supabase
+        .from('deals')
+        .select('*')
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      
+      const userIds = [...new Set(deals.map(d => d.user_id))];
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('user_id, email')
+        .in('user_id', userIds);
+      
+      const profileMap = new Map(profiles?.map(p => [p.user_id, p.email]) ?? []);
+      
+      return deals.map(deal => ({
+        ...deal,
+        marketer_email: profileMap.get(deal.user_id),
+      })) as Deal[];
+    },
+    enabled: !!user,
+  });
+}
+
+export function useApproveDeal() {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+
+  return useMutation({
+    mutationFn: async ({ id, admin_notes, updates }: { id: string; admin_notes?: string; updates?: Partial<DealUpdate> }) => {
+      if (!user) throw new Error('Not authenticated');
+      
+      const { data, error } = await supabase
+        .from('deals')
+        .update({
+          ...updates,
+          status: 'approved' as any,
+          admin_notes: admin_notes || null,
+          reviewed_at: new Date().toISOString(),
+          reviewed_by: user.id,
+        })
+        .eq('id', id)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['deals'] });
+    },
+  });
+}
+
+export function useRejectDeal() {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+
+  return useMutation({
+    mutationFn: async ({ id, admin_notes }: { id: string; admin_notes: string }) => {
+      if (!user) throw new Error('Not authenticated');
+      
+      const { data, error } = await supabase
+        .from('deals')
+        .update({
+          status: 'rejected' as any,
+          admin_notes,
+          reviewed_at: new Date().toISOString(),
+          reviewed_by: user.id,
+        })
+        .eq('id', id)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['deals'] });
     },
   });
 }

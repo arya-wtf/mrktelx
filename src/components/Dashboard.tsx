@@ -14,6 +14,7 @@ import { MonthlyCommissionSummary } from './MonthlyCommissionSummary';
 import { BulkDealImport } from './BulkDealImport';
 import { RevenueCharts } from './RevenueCharts';
 import { UserManagement } from './UserManagement';
+import { PendingApprovals } from './PendingApprovals';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -30,7 +31,8 @@ import {
   Users,
   ChevronLeft,
   ChevronRight,
-  Upload
+  Upload,
+  ClipboardCheck
 } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO, subMonths, addMonths } from 'date-fns';
 
@@ -47,8 +49,25 @@ export function Dashboard({ userRole }: DashboardProps) {
   
   const isAdmin = userRole === 'admin';
 
-  // Selected month deals
+  // Filter only approved deals for calculations
+  const approvedDeals = useMemo(() => 
+    deals.filter((deal: Deal) => (deal as any).status === 'approved'),
+    [deals]
+  );
+
+  // Selected month deals (approved only)
   const currentMonthDeals = useMemo(() => {
+    const start = startOfMonth(selectedMonth);
+    const end = endOfMonth(selectedMonth);
+    
+    return approvedDeals.filter((deal: Deal) => {
+      const paymentDate = parseISO(deal.date_payment);
+      return isWithinInterval(paymentDate, { start, end });
+    });
+  }, [approvedDeals, selectedMonth]);
+
+  // All month deals (including pending/rejected) for display
+  const allCurrentMonthDeals = useMemo(() => {
     const start = startOfMonth(selectedMonth);
     const end = endOfMonth(selectedMonth);
     
@@ -117,22 +136,23 @@ export function Dashboard({ userRole }: DashboardProps) {
             </div>
           </div>
           
-          {isAdmin && (
-            <div className="flex gap-2">
+          
+          <div className="flex gap-2">
+            {isAdmin && (
               <Button variant="outline" onClick={() => setShowBulkImport(true)} className="gap-2">
                 <Upload className="w-4 h-4" />
                 Bulk Import
               </Button>
-              <Button onClick={() => setShowAddDeal(true)} className="gap-2">
-                <Plus className="w-4 h-4" />
-                Add Deal
-              </Button>
-            </div>
-          )}
+            )}
+            <Button onClick={() => setShowAddDeal(true)} className="gap-2">
+              <Plus className="w-4 h-4" />
+              {isAdmin ? 'Add Deal' : 'Submit Deal'}
+            </Button>
+          </div>
         </div>
 
         {/* Safety Net Alert */}
-        <SafetyNetAlert deals={deals} selectedMonth={selectedMonth} />
+        <SafetyNetAlert deals={approvedDeals} selectedMonth={selectedMonth} />
 
         {/* Stats Grid - Bento Layout */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
@@ -183,6 +203,12 @@ export function Dashboard({ userRole }: DashboardProps) {
               Quarterly
             </TabsTrigger>
             {isAdmin && (
+              <TabsTrigger value="approvals" className="gap-2">
+                <ClipboardCheck className="w-4 h-4" />
+                Approvals
+              </TabsTrigger>
+            )}
+            {isAdmin && (
               <TabsTrigger value="users" className="gap-2">
                 <Users className="w-4 h-4" />
                 Users
@@ -197,10 +223,10 @@ export function Dashboard({ userRole }: DashboardProps) {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Deals Table - Takes 2 columns */}
               <div className="lg:col-span-2">
-                <h3 className="text-lg font-display font-semibold mb-4">
-                  Deals This Month ({currentMonthDeals.length})
-                </h3>
-                <DealsTable deals={currentMonthDeals} isAdmin={isAdmin} />
+              <h3 className="text-lg font-display font-semibold mb-4">
+                Deals This Month ({allCurrentMonthDeals.length})
+              </h3>
+              <DealsTable deals={allCurrentMonthDeals} isAdmin={isAdmin} />
               </div>
 
               {/* Sidebar - 1 column */}
@@ -212,16 +238,22 @@ export function Dashboard({ userRole }: DashboardProps) {
           </TabsContent>
 
           <TabsContent value="charts" className="space-y-6">
-            <RevenueCharts deals={deals} selectedMonth={selectedMonth} />
+            <RevenueCharts deals={approvedDeals} selectedMonth={selectedMonth} />
           </TabsContent>
 
           <TabsContent value="quarterly" className="space-y-6">
-            <QuarterlySummary deals={deals} />
+            <QuarterlySummary deals={approvedDeals} />
             
             {isAdmin && (
-              <CorrectionLog corrections={corrections} deals={deals} isAdmin={isAdmin} />
+              <CorrectionLog corrections={corrections} deals={approvedDeals} isAdmin={isAdmin} />
             )}
           </TabsContent>
+
+          {isAdmin && (
+            <TabsContent value="approvals" className="space-y-6">
+              <PendingApprovals />
+            </TabsContent>
+          )}
 
           {isAdmin && (
             <TabsContent value="users" className="space-y-6">

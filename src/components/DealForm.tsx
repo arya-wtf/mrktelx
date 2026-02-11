@@ -69,8 +69,9 @@ export function DealForm({ onClose, isAdmin }: DealFormProps) {
         is_retainer: formData.is_retainer,
         retainer_month: formData.is_retainer ? parseInt(formData.retainer_month) : 1,
         user_id: targetUserId,
+        isAdmin,
       });
-      toast.success('Deal added successfully');
+      toast.success(isAdmin ? 'Deal added successfully' : 'Deal submitted for approval');
       onClose();
     } catch (error) {
       toast.error('Failed to add deal');
@@ -85,7 +86,7 @@ export function DealForm({ onClose, isAdmin }: DealFormProps) {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm animate-fade-in">
       <div className="bento-card w-full max-w-lg mx-4 animate-slide-up max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-display font-bold">Add New Deal</h2>
+          <h2 className="text-xl font-display font-bold">{isAdmin ? 'Add New Deal' : 'Submit Deal for Approval'}</h2>
           <button
             onClick={onClose}
             className="w-8 h-8 rounded-lg bg-secondary/50 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
@@ -311,7 +312,7 @@ export function DealForm({ onClose, isAdmin }: DealFormProps) {
               ) : (
                 <Plus className="w-4 h-4" />
               )}
-              Add Deal
+              {isAdmin ? 'Add Deal' : 'Submit for Approval'}
             </Button>
           </div>
         </form>
