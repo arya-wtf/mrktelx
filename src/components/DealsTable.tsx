@@ -6,7 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { Trash2, Edit2, Check, X, DollarSign, Loader2, Briefcase, RefreshCw } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Trash2, Edit2, Check, X, DollarSign, Loader2, Briefcase, RefreshCw, Clock, CheckCircle2, XCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -117,7 +118,7 @@ export function DealsTable({ deals, isAdmin }: DealsTableProps) {
               <TableHead className="text-muted-foreground font-medium text-right">Fee</TableHead>
               <TableHead className="text-muted-foreground font-medium text-right">Net</TableHead>
               <TableHead className="text-muted-foreground font-medium text-center">Type</TableHead>
-              
+              <TableHead className="text-muted-foreground font-medium text-center">Status</TableHead>
               {isAdmin && (
                 <TableHead className="text-muted-foreground font-medium text-center">Actions</TableHead>
               )}
@@ -225,6 +226,14 @@ export function DealsTable({ deals, isAdmin }: DealsTableProps) {
                     ) : (
                       getDealTypeBadge(deal)
                     )}
+                  </TableCell>
+                  <TableCell className="text-center">
+                    {(() => {
+                      const status = (deal as any).status;
+                      if (status === 'pending') return <Badge variant="outline" className="gap-1 border-yellow-500/50 text-yellow-500"><Clock className="w-3 h-3" />Pending</Badge>;
+                      if (status === 'rejected') return <Badge variant="outline" className="gap-1 border-destructive/50 text-destructive"><XCircle className="w-3 h-3" />Rejected</Badge>;
+                      return <Badge variant="outline" className="gap-1 border-green-500/50 text-green-500"><CheckCircle2 className="w-3 h-3" />Approved</Badge>;
+                    })()}
                   </TableCell>
                   {isAdmin && (
                     <TableCell>
